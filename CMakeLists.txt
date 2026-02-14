@@ -4,7 +4,7 @@ include(cmake/Settings.cmake)
 include(cmake/Utilities.cmake)
 
 project(
-    "project"
+    "axio"
     VERSION 1.0.0
     LANGUAGES CXX C
 )
