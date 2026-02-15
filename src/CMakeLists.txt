@@ -1,5 +1,6 @@
 add_library(
     axio 
+    axio/axio.cpp
     axio/base/arch.hpp
     axio/base/compiler.hpp
     axio/base/macros.hpp
@@ -8,7 +9,6 @@ add_library(
     axio/container/array.hpp
     axio/container/vector.hpp
 )
-set_target_properties(axio PROPERTIES LINKER_LANGUAGE CXX)
 
 target_enable_clang_format(axio)
 target_enable_clang_tidy(axio)
