@@ -4,8 +4,11 @@
 #if defined(_WIN32) || defined(_WIN64)
 #define AXIO_OS_WINDOWS 1
 #if defined(_WIN64)
+#define AXIO_OS_WINDOWS_X64 1
 #define AXIO_OS_NAME "windows-x64"
 #else
+#define AXIO_OS_WINDOWS_X86 1
+#define AXIO_OS_WINDOWS 1
 #define AXIO_OS_NAME "windows-x86"
 #endif
 
