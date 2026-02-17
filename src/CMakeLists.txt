@@ -9,6 +9,7 @@ add_library(
     axio/container/array.hpp
     axio/container/vector.hpp
 )
+add_library(axio::axio ALIAS axio)
 
 target_enable_clang_format(axio)
 target_enable_clang_tidy(axio)
