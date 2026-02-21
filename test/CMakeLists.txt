@@ -21,5 +21,6 @@ axio_test(
     base/compiler.cpp
     base/macros.cpp
     base/os.cpp
+    base/type_traits.cpp
     base/types.cpp
 )
