@@ -5,6 +5,7 @@ add_library(
     axio/base/compiler.hpp
     axio/base/macros.hpp
     axio/base/os.hpp
+    axio/base/type_traits.hpp
     axio/base/types.hpp
     axio/container/array.hpp
     axio/container/vector.hpp
