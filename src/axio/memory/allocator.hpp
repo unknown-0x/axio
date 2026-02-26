@@ -42,11 +42,11 @@ class Allocator {
     }
   }
 
-  void deallocate(T* ptr, SizeT num) {
+  void deallocate(T* ptr, SizeT) {
     if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
-      ::operator delete(ptr, num * sizeof(T), std::align_val_t{alignof(T)});
+      ::operator delete(ptr, std::align_val_t{alignof(T)});
     } else {
-      ::operator delete(ptr, num * sizeof(T));
+      ::operator delete(ptr);
     }
   }
 };
