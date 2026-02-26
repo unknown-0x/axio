@@ -24,3 +24,19 @@ axio_test(
     base/type_traits.cpp
     base/types.cpp
 )
+
+axio_test(
+    container_test
+    container/compressed_tuple.cpp
+)
+
+axio_test(
+    memory_test 
+    memory/allocator.cpp
+)
+
+axio_test(
+    utility_test 
+    utility/forward.cpp
+    utility/move.cpp
+)
