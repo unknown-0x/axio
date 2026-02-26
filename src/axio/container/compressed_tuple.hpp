@@ -7,7 +7,7 @@
 
 #include <utility>
 
-#if defined(_MSC_VER) && !defined(__clang__)
+#if defined(_MSC_VER)
 #define AXIO_EMPTY_BASES __declspec(empty_bases)
 #else
 #define AXIO_EMPTY_BASES
@@ -19,7 +19,7 @@ class CompressedTuple;
 
 namespace compressed_tuple_details {
 template <SizeT INDEX, typename T, Bool = V<ShouldUseEBO<T>>>
-struct Element : T {
+struct AXIO_EMPTY_BASES Element : T {
   constexpr Element() = default;
   template <typename U>
   explicit constexpr Element(U&& value) : T(Forward<U>(value)) {}
@@ -85,7 +85,7 @@ struct PairwiseConstructible<true, TypeList<Ts...>, TypeList<Us...>>
 }  // namespace compressed_tuple_details
 
 template <typename... Ts>
-class CompressedTuple
+class AXIO_EMPTY_BASES CompressedTuple
     : private compressed_tuple_details::
           CompressedTupleImpl<std::make_index_sequence<sizeof...(Ts)>, Ts...> {
   using Base = compressed_tuple_details::
