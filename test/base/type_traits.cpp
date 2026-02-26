@@ -337,3 +337,19 @@ TEST_CASE(TypeTraits, IsGreaterThanComparable) {
   static_assert(!axio::IsGreaterThanComparable<NoCompare>::value, "");
   static_assert(axio::IsGreaterThanComparable<FullCompare>::value, "");
 }
+
+TEST_CASE(TypeTraits, ShouldUseEBO) {
+  IGNORE_RESULT();
+
+  struct Empty {};
+  struct FinalEmpty final {};
+  struct NonEmpty {
+    int x;
+  };
+
+  static_assert(axio::ShouldUseEBO<Empty>::value, "");
+
+  static_assert(!axio::ShouldUseEBO<FinalEmpty>::value, "");
+  static_assert(!axio::ShouldUseEBO<NonEmpty>::value, "");
+  static_assert(!axio::ShouldUseEBO<int>::value, "");
+}

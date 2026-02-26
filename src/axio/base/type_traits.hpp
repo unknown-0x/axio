@@ -424,6 +424,10 @@ struct IsGreaterThanComparable<
     : BoolConstant<
           IsConvertible<decltype(std::declval<Lhs>() > std::declval<Rhs>()),
                         bool>::value> {};
+
+template <typename T>
+struct ShouldUseEBO : BoolConstant<IsEmpty<T>::value && IsClass<T>::value &&
+                                   !IsFinal<T>::value> {};
 }  // namespace axio
 
 #endif
