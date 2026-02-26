@@ -8,7 +8,11 @@ add_library(
     axio/base/type_traits.hpp
     axio/base/types.hpp
     axio/container/array.hpp
+    axio/container/compressed_tuple.hpp
     axio/container/vector.hpp
+    axio/memory/allocator.hpp
+    axio/utility/forward.hpp
+    axio/utility/move.hpp
 )
 add_library(axio::axio ALIAS axio)
 
