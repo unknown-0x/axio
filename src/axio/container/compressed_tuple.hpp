@@ -1,9 +1,10 @@
 #ifndef AXIO_CONTAINER_COMPRESSED_TUPLE_HPP_
 #define AXIO_CONTAINER_COMPRESSED_TUPLE_HPP_
 
-#include "../base/type_traits.hpp"
 #include "../utility/forward.hpp"
 #include "../utility/move.hpp"
+
+#include "internal/tuple_fwd.hpp"
 
 #include <utility>
 
@@ -14,9 +15,6 @@
 #endif
 
 namespace axio {
-template <typename... Ts>
-class CompressedTuple;
-
 namespace compressed_tuple_details {
 template <SizeT INDEX, typename T, Bool = V<ShouldUseEBO<T>>>
 struct AXIO_EMPTY_BASES Element : T {
@@ -275,15 +273,9 @@ constexpr bool operator!=(const CompressedTuple<Ts...>& lhs,
   return !(lhs == rhs);
 }
 
-template <typename T>
-struct TupleSize;
-
 template <typename... Ts>
 struct TupleSize<CompressedTuple<Ts...>>
     : IntegralConstant<SizeT, sizeof...(Ts)> {};
-
-template <SizeT I, typename T>
-struct TupleElement;
 
 template <SizeT I, typename... Ts>
 struct TupleElement<I, CompressedTuple<Ts...>> {
