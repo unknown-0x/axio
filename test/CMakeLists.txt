@@ -27,6 +27,7 @@ axio_test(
 
 axio_test(
     container_test
+    container/array.cpp
     container/compressed_tuple.cpp
 )
 
