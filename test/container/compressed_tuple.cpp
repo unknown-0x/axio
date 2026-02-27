@@ -279,3 +279,30 @@ TEST_CASE(CompressedTuple, CompressedPairSize) {
   using P = axio::CompressedPair<Empty1, int>;
   CHECK_EQ(sizeof(P), sizeof(int));
 }
+
+static_assert(axio::TupleSize<CompressedPair<int, int>>::value == 2, "");
+static_assert(axio::TupleSize<const CompressedPair<int, int>>::value == 2, "");
+static_assert(axio::TupleSize<volatile CompressedPair<int, int>>::value == 2,
+              "");
+static_assert(axio::TupleSize<const volatile CompressedPair<int, int>>::value ==
+                  2,
+              "");
+
+static_assert(
+    axio::V<axio::IsSame<axio::TupleElement<1, CompressedPair<int, int>>::type,
+                         int>>,
+    "");
+static_assert(axio::V<axio::IsSame<
+                  axio::TupleElement<1, const CompressedPair<int, int>>::type,
+                  const int>>,
+              "");
+static_assert(
+    axio::V<axio::IsSame<
+        axio::TupleElement<1, volatile CompressedPair<int, int>>::type,
+        volatile int>>,
+    "");
+static_assert(
+    axio::V<axio::IsSame<
+        axio::TupleElement<1, const volatile CompressedPair<int, int>>::type,
+        const volatile int>>,
+    "");
