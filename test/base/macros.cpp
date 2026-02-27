@@ -101,3 +101,18 @@ TEST_CASE(Macros, Bit) {
   constexpr std::uint64_t mask = AXIO_BIT(10);
   static_assert(mask == 1024ULL, "AXIO_BIT must be constexpr usable");
 }
+
+TEST_CASE(Macros, MinMax) {
+  IGNORE_RESULT();
+
+  static_assert(AXIO_MIN(1, 2) == 1, "");
+  static_assert(AXIO_MAX(1, 2) == 2, "");
+}
+
+constexpr int Foo(int a) {
+  AXIO_ASSERT(a != 0);
+  return a;
+}
+
+static_assert(Foo(5) == 5, "Should be evaluated");
+// static_assert(Foo(0) == 0, "Should not be evaluated");

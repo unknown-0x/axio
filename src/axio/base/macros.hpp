@@ -4,6 +4,8 @@
 #include "compiler.hpp"
 #include "types.hpp"
 
+#include <cassert>
+
 namespace axio {
 namespace internal {
 template <typename T, SizeT N>
@@ -41,5 +43,29 @@ auto ArraySizeImpl(const T (&arr)[N]) -> char (&)[N];
 #define AXIO_NODISCARD
 #endif
 #endif
+
+#ifdef __has_builtin
+#define AXIO_HAS_BUILTIN(name) __has_builtin(name)
+#else
+#define AXIO_HAS_BUILTIN(name) 0
+#endif
+
+#if AXIO_HAS_BUILTIN(__builtin_expect) || defined(AXIO_COMPILER_GCC)
+#define AXIO_LIKELY(x) (__builtin_expect(!!(x), true))
+#define AXIO_UNLIKELY(x) (__builtin_expect(!!(x), false))
+#else
+#define AXIO_LIKELY(x) (x)
+#define AXIO_UNLIKELY(x) (x)
+#endif
+
+#ifdef NDEBUG
+#define AXIO_ASSERT(expr) ((void)(false && (expr)))
+#else
+#define AXIO_ASSERT(expr) \
+  (AXIO_LIKELY((expr)) ? (void)0 : [] { assert(false && #expr); }())
+#endif
+
+#define AXIO_MAX(a, b) (a > b ? a : b)
+#define AXIO_MIN(a, b) (a < b ? a : b)
 
 #endif
