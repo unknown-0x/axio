@@ -74,7 +74,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest]
-        msystem: [ucrt64, clang64, mingw64, mingw32]
+        msystem: [ucrt64, clang64, mingw64]
         build_type: [debug, release]
         build_shared_libs:
           - { value: 'ON', text: 'shared' }
