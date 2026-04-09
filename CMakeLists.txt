@@ -35,7 +35,16 @@ if(BUILD_TESTING)
         GIT_REPOSITORY https://github.com/unknown-0x/simple-test.git
         GIT_TAG        main
     )
-
     FetchContent_MakeAvailable(simpletest)
     add_subdirectory(test)
+endif()
+
+if(BUILD_BENCHMARK)
+    FetchContent_Declare(
+        simplebench
+        GIT_REPOSITORY https://github.com/unknown-0x/simple-bench.git
+        GIT_TAG        main
+    )
+    FetchContent_MakeAvailable(simplebench)
+    add_subdirectory(benchmark)
 endif()
