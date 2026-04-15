@@ -25,11 +25,12 @@ endif()
 
 add_subdirectory(src)
 
-if(BUILD_TESTING)
+if(AXIO_BUILD_TESTING)
     include(CTest)
     include(FetchContent)
     enable_testing()
     
+    set(SIMPLETEST_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(
         simpletest
         GIT_REPOSITORY https://github.com/unknown-0x/simple-test.git
@@ -39,7 +40,8 @@ if(BUILD_TESTING)
     add_subdirectory(test)
 endif()
 
-if(BUILD_BENCHMARK)
+if(AXIO_BUILD_BENCHMARK)
+    set(SIMPLEBENCH_BUILD_BENCHMARK OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(
         simplebench
         GIT_REPOSITORY https://github.com/unknown-0x/simple-bench.git

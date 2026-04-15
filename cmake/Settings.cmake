@@ -1,4 +1,5 @@
-option(BUILD_TESTING "Build testing" OFF)
+option(AXIO_BUILD_TESTING "Build testing" OFF)
+option(AXIO_BUILD_BENCHMARK "Build benchmark" OFF)
 option(ENABLE_CLANG_TIDY "Enable clang-tidy static analysis" OFF)
 option(WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
@@ -39,4 +40,5 @@ message(STATUS "WARNINGS_AS_ERRORS: ${WARNINGS_AS_ERRORS}")
 message(STATUS "CMAKE_CXX_STANDARD: ${CMAKE_CXX_STANDARD}")
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message(STATUS "BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}")
-message(STATUS "BUILD_TESTING: ${BUILD_TESTING}")
+message(STATUS "AXIO_BUILD_TESTING: ${AXIO_BUILD_TESTING}")
+message(STATUS "AXIO_BUILD_BENCHMARK: ${AXIO_BUILD_BENCHMARK}")
