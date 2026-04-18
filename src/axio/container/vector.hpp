@@ -129,6 +129,7 @@ class Vector {
 
     auto& alloc = Initialize(other.Size());
     MoveElements(alloc, begin_, other.begin_, other.end_);
+    other.Clear();
   }
 
   ~Vector() { Release(InternalAllocator(), begin_, end_, GetEndOfStorage()); }
@@ -166,7 +167,7 @@ class Vector {
         Pointer& end_of_storage = GetEndOfStorage();
         Release(allocator, begin_, end_, end_of_storage);
         if constexpr (can_propagate) {
-          allocator = std::move(other_allocator);
+          allocator = Move(other_allocator);
         }
         begin_ = other.begin_;
         end_ = other.end_;
@@ -175,6 +176,7 @@ class Vector {
       } else {
         Assign(std::make_move_iterator(other.begin_),
                std::make_move_iterator(other.end_));
+        other.Clear();
       }
     }
     return *this;

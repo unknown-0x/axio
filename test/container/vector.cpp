@@ -11,8 +11,8 @@ using axio::Vector;
 using IntVector = Vector<int>;
 
 namespace {
-template <typename T, typename U>
-axio::Bool Expect(const Vector<T>& v, std::initializer_list<U> l) {
+template <typename T, typename A, typename U>
+axio::Bool Expect(const Vector<T, A>& v, std::initializer_list<U> l) {
   if (v.Size() != l.size()) {
     return false;
   }
@@ -1871,4 +1871,139 @@ TEST_CASE(NTVector, Comparision) {
     CHECK_TRUE(v1 >= v2);
     CHECK_TRUE(v2 <= v1);
   }
+}
+
+template <typename T, bool PropagateCopy = false, bool PropagateMove = false>
+struct MockAllocator {
+  using value_type = T;
+
+  template <typename U>
+  struct rebind {
+    using other = MockAllocator<U, PropagateCopy, PropagateMove>;
+  };
+  using propagate_on_container_copy_assignment =
+      std::bool_constant<PropagateCopy>;
+  using propagate_on_container_move_assignment =
+      std::bool_constant<PropagateMove>;
+  int id;
+
+  MockAllocator(int id = 0) : id(id) {}
+
+  template <typename U>
+  MockAllocator(const MockAllocator<U, PropagateCopy, PropagateMove>& other)
+      : id(other.id) {}
+
+  T* allocate(std::size_t n) {
+    if (n == 0)
+      return nullptr;
+    return static_cast<T*>(::operator new(n * sizeof(T)));
+  }
+
+  void deallocate(T* p, std::size_t n) {
+    ::operator delete(p);
+    AXIO_IGNORE(n);
+  }
+
+  bool operator==(const MockAllocator& other) const { return id == other.id; }
+  bool operator!=(const MockAllocator& other) const { return id != other.id; }
+};
+
+TEST_CASE(NTVector, ConstructorWithCustomAllocator) {
+  MockAllocator<NT> alloc(101);
+  axio::Vector<NT, MockAllocator<NT>> v(alloc);
+  CHECK_EQ(v.GetAllocator().id, 101);
+}
+
+TEST_CASE(NTVector, MoveConstructorSameAlloc) {
+  MockAllocator<NT> alloc(10);
+  axio::Vector<NT, MockAllocator<NT>> v1({"1", "2", "3"}, alloc);
+  auto* original_ptr = v1.Data();
+  CHECK_VECTOR(v1, {"1", "2", "3"});
+
+  axio::Vector<NT, MockAllocator<NT>> v2(axio::Move(v1), MockAllocator<NT>(10));
+
+  CHECK_ALIVE_COUNT(3);
+  CHECK_VECTOR(v2, {"1", "2", "3"});
+  CHECK_EQ(v1.Data(), nullptr);
+  CHECK_EQ(v2.Data(), original_ptr);
+  CHECK_EQ(v1.GetAllocator().id, v2.GetAllocator().id);
+}
+
+TEST_CASE(NTVector, MoveConstructorDifferentAlloc) {
+  MockAllocator<NT> alloc1(10);
+  axio::Vector<NT, MockAllocator<NT>> v1({"1", "2", "3"}, alloc1);
+  auto* original_ptr = v1.Data();
+
+  MockAllocator<NT> alloc2(20);
+  axio::Vector<NT, MockAllocator<NT>> v2(axio::Move(v1), alloc2);
+
+  CHECK_ALIVE_COUNT(3);
+  CHECK_EQ(v1.GetAllocator().id, 10);
+  CHECK_EQ(v2.GetAllocator().id, 20);
+  CHECK_NE(v2.Data(), original_ptr);
+  CHECK_VECTOR(v2, {"1", "2", "3"});
+  CHECK_TRUE(v1.IsEmpty());
+}
+
+TEST_CASE(NTVector, CopyAssignmentPropagation) {
+  using PropagatingAlloc = MockAllocator<NT, true>;
+
+  axio::Vector<NT, PropagatingAlloc> v1({"1"}, PropagatingAlloc(10));
+  CHECK_ALIVE_COUNT(1);
+  axio::Vector<NT, PropagatingAlloc> v2({"2", "3"}, PropagatingAlloc(20));
+  CHECK_ALIVE_COUNT(3);
+  v2 = v1;
+  CHECK_ALIVE_COUNT(2);
+  CHECK_EQ(v2.GetAllocator().id, 10);
+  CHECK_VECTOR(v2, {"1"});
+}
+
+TEST_CASE(NTVector, MoveAssignmentPropagation) {
+  using MoveAlloc = MockAllocator<NT, false, true>;
+
+  axio::Vector<NT, MoveAlloc> v1({"1", "2"}, MoveAlloc(10));
+  CHECK_ALIVE_COUNT(2);
+  CHECK_VECTOR(v1, {"1", "2"});
+  auto* original_v1_ptr = v1.Data();
+  axio::Vector<NT, MoveAlloc> v2({"3", "4"}, MoveAlloc(20));
+  CHECK_ALIVE_COUNT(4);
+  CHECK_VECTOR(v2, {"3", "4"});
+
+  v2 = axio::Move(v1);
+  CHECK_ALIVE_COUNT(2);
+
+  CHECK_VECTOR(v2, {"1", "2"});
+  CHECK_EQ(v2.GetAllocator().id, 10);
+  CHECK_EQ(v2.Data(), original_v1_ptr);
+  CHECK_EQ(v1.Data(), nullptr);
+}
+
+TEST_CASE(NTVector, ReservePreservesAllocator) {
+  MockAllocator<NT> alloc(999);
+  axio::Vector<NT, MockAllocator<NT>> v(alloc);
+
+  v.Push("1");
+  v.Reserve(24);
+
+  CHECK_EQ(v.GetAllocator().id, 999);
+  CHECK_EQ(v.Capacity(), 24);
+  CHECK_VECTOR(v, {"1"});
+}
+
+TEST_CASE(NTVector, MoveAssignmentDifferentAlloc) {
+  using Alloc = MockAllocator<NT, false, false>;
+
+  Vector<NT, Alloc> v1({"1", "2", "3"}, Alloc(10));
+  Vector<NT, Alloc> v2({"4", "5"}, Alloc(20));
+  CHECK_ALIVE_COUNT(5);
+  NT* v1_ptr = v1.Data();
+  NT* v2_ptr = v2.Data();
+
+  v2 = axio::Move(v1);
+  CHECK_ALIVE_COUNT(3);
+
+  CHECK_EQ(v2.GetAllocator().id, 20);
+  CHECK_NE(v2_ptr, v1_ptr);
+  CHECK_TRUE(v1.IsEmpty());
+  CHECK_VECTOR(v2, {"1", "2", "3"});
 }
