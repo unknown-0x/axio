@@ -18,7 +18,10 @@ static_assert(ConstexprBasicTest(), "");
 constexpr bool ConstexprEqualityTest() {
   CompressedTuple<int, int, char> t1{1, 2, 'c'};
   CompressedTuple<int, int, char> t2{1, 2, 'c'};
-  return t1 == t2;
+
+  CompressedTuple<> empty1{};
+  CompressedTuple<> empty2{};
+  return t1 == t2 && empty1 == empty2;
 }
 static_assert(ConstexprEqualityTest(), "");
 
@@ -28,6 +31,29 @@ constexpr bool ConstexprInequalityTest() {
   return t1 != t2;
 }
 static_assert(ConstexprInequalityTest(), "");
+
+constexpr bool ConstexprComparisionTest() {
+  bool ret = true;
+  {
+    CompressedTuple<int, int, int> t1{0, 2, 3};
+    CompressedTuple<int, int, int> t2{1, 2, 3};
+    CompressedTuple<int, int, int> t3{1, 2, 3};
+    CompressedTuple<int, int, int> t4{2, 2, 3};
+    ret = ret && (t1 < t2);
+    ret = ret && (t1 <= t2);
+    ret = ret && (t2 <= t3);
+    ret = ret && (t2 >= t3);
+    ret = ret && (t4 > t3);
+  }
+  {
+    CompressedTuple<int, int, int> t1{1, 2, 5};
+    CompressedTuple<int, int, int> t2{1, 1, 9};
+    ret = ret && (t1 > t2);
+    ret = ret && (t2 < t1);
+  }
+  return ret;
+}
+static_assert(ConstexprComparisionTest(), "");
 
 struct Empty1 {};
 struct Empty2 {};
@@ -198,6 +224,38 @@ TEST_CASE(CompressedTuple, EqualityOperator) {
 
   CHECK_EQ(a, b);
   CHECK_NE(a, c);
+
+  CompressedTuple<> empty1{};
+  CompressedTuple<> empty2{};
+  CHECK_EQ(empty1, empty2);
+}
+
+TEST_CASE(CompressedTuple, Comparision) {
+  {
+    CompressedTuple<int, int, int> t1{0, 2, 3};
+    CompressedTuple<int, int, int> t2{1, 2, 3};
+    CompressedTuple<int, int, int> t3{1, 2, 3};
+    CompressedTuple<int, int, int> t4{2, 2, 3};
+    CHECK_TRUE(t1 < t2);
+    CHECK_TRUE(t1 <= t2);
+    CHECK_TRUE(t2 <= t3);
+    CHECK_TRUE(t2 >= t3);
+    CHECK_TRUE(t4 > t3);
+  }
+  {
+    CompressedTuple<int, int, int> t1{1, 2, 5};
+    CompressedTuple<int, int, int> t2{1, 1, 9};
+    CHECK_TRUE(t1 > t2);
+    CHECK_TRUE(t2 < t1);
+  }
+  {
+    CompressedTuple<std::string, int, int> t1{"aaa", 1, 4};
+    CompressedTuple<std::string, int, int> t2{"aaa", 1, 999};
+    CHECK_TRUE(t1 < t2);
+    CHECK_TRUE(t1 <= t2);
+    CHECK_TRUE(t2 > t1);
+    CHECK_TRUE(t2 >= t1);
+  }
 }
 
 TEST_CASE(CompressedTuple, EBOTests) {

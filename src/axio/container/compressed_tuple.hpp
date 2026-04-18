@@ -4,7 +4,7 @@
 #include "../utility/forward.hpp"
 #include "../utility/move.hpp"
 
-#include "internal/tuple_fwd.hpp"
+#include "detail/tuple_fwd.hpp"
 
 #include <utility>
 
@@ -245,6 +245,23 @@ constexpr bool TupleEqualImpl(
                           ...)) {
   return ((Get<Is>(lhs) == Get<Is>(rhs)) && ...);
 }
+
+template <typename Lhs, typename Rhs, SizeT... Is>
+constexpr bool TupleLessThanImpl(
+    const Lhs& lhs,
+    const Rhs& rhs,
+    std::index_sequence<
+        Is...>) noexcept((noexcept(Get<Is>(std::declval<Lhs>()) <
+                                   Get<Is>(std::declval<Rhs>())) &&
+                          ...)) {
+  bool result = false;
+  ((Get<Is>(lhs) < Get<Is>(rhs)   ? (result = true, true)
+    : Get<Is>(rhs) < Get<Is>(lhs) ? (result = false, true)
+                                  : false) ||
+   ...);
+
+  return result;
+}
 }  // namespace compressed_tuple_details
 
 template <typename... Ts,
@@ -271,6 +288,40 @@ template <typename... Ts, typename... Us>
 constexpr bool operator!=(const CompressedTuple<Ts...>& lhs,
                           const CompressedTuple<Us...>& rhs) {
   return !(lhs == rhs);
+}
+
+template <typename... Ts, typename... Us>
+constexpr bool operator<(
+    const CompressedTuple<Ts...>& lhs,
+    const CompressedTuple<Us...>&
+        rhs) noexcept(noexcept(compressed_tuple_details::
+                                   TupleLessThanImpl(
+                                       std::declval<
+                                           const CompressedTuple<Ts...>&>(),
+                                       std::declval<
+                                           const CompressedTuple<Us...>&>(),
+                                       std::make_index_sequence<
+                                           sizeof...(Ts)>{}))) {
+  return compressed_tuple_details::TupleLessThanImpl(
+      lhs, rhs, std::make_index_sequence<sizeof...(Ts)>{});
+}
+
+template <typename... Ts, typename... Us>
+constexpr bool operator<=(const CompressedTuple<Ts...>& lhs,
+                          const CompressedTuple<Us...>& rhs) {
+  return !(rhs < lhs);
+}
+
+template <typename... Ts, typename... Us>
+constexpr bool operator>(const CompressedTuple<Ts...>& lhs,
+                         const CompressedTuple<Us...>& rhs) {
+  return rhs < lhs;
+}
+
+template <typename... Ts, typename... Us>
+constexpr bool operator>=(const CompressedTuple<Ts...>& lhs,
+                          const CompressedTuple<Us...>& rhs) {
+  return !(lhs < rhs);
 }
 
 template <typename... Ts>
