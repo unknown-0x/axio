@@ -26,11 +26,11 @@ class Allocator {
   Allocator& operator=(Allocator&&) noexcept = default;
 
   AXIO_NODISCARD T* allocate(SizeT num) {
-    if (num == 0) {
+    if (AXIO_LIKELY(num == 0)) {
       return nullptr;
     }
 
-    if (num > kMaxSize) {
+    if (AXIO_LIKELY(num > kMaxSize)) {
       throw std::bad_array_new_length();
     }
 
@@ -50,6 +50,16 @@ class Allocator {
     }
   }
 };
+
+template <typename T, typename U>
+inline Bool operator==(const Allocator<T>&, const Allocator<U>&) noexcept {
+  return true;
+}
+
+template <typename T, typename U>
+inline Bool operator!=(const Allocator<T>&, const Allocator<U>&) noexcept {
+  return false;
+}
 }  // namespace axio
 
 #endif

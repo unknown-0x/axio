@@ -68,4 +68,6 @@ auto ArraySizeImpl(const T (&arr)[N]) -> char (&)[N];
 #define AXIO_MAX(a, b) (a > b ? a : b)
 #define AXIO_MIN(a, b) (a < b ? a : b)
 
+#define AXIO_IGNORE(x) ((void)x)
+
 #endif
