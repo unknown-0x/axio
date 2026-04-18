@@ -10,6 +10,8 @@ add_library(
     axio/container/array.hpp
     axio/container/compressed_tuple.hpp
     axio/container/vector.hpp
+    axio/container/detail/iterator_traits.hpp
+    axio/container/detail/tuple_fwd.hpp
     axio/memory/allocator.hpp
     axio/utility/forward.hpp
     axio/utility/move.hpp

@@ -8,7 +8,7 @@
 #include "../base/types.hpp"
 #include "../utility/move.hpp"
 
-#include "internal/tuple_fwd.hpp"
+#include "detail/tuple_fwd.hpp"
 
 namespace axio {
 template <typename T, SizeT N>
