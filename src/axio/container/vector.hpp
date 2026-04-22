@@ -6,8 +6,8 @@
 #include <limits>
 #include <memory>
 
-#include "compressed_tuple.hpp"
 #include "detail/iterator_traits.hpp"
+#include "tuple.hpp"
 
 #include "../base/macros.hpp"
 #include "../base/type_traits.hpp"
@@ -206,11 +206,12 @@ class Vector {
 
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   void Assign(ForwardIt first, ForwardIt last) {
-    const SizeType count = std::distance(first, last);
+    const SizeType count = static_cast<SizeType>(std::distance(first, last));
     const SizeType old_size = Size();
     if (AXIO_LIKELY(count > old_size)) {
       Pointer old_end_of_storage = GetEndOfStorage();
-      const SizeType current_capacity = old_end_of_storage - begin_;
+      const SizeType current_capacity =
+          static_cast<SizeType>(old_end_of_storage - begin_);
       if (AXIO_LIKELY(count > current_capacity)) {
         auto& allocator = InternalAllocator();
         Pointer old_begin = Allocate(allocator, count);
@@ -234,7 +235,8 @@ class Vector {
     const SizeType old_size = Size();
     if (AXIO_LIKELY(count > old_size)) {
       Pointer old_end_of_storage = GetEndOfStorage();
-      const SizeType current_capacity = old_end_of_storage - begin_;
+      const SizeType current_capacity =
+          static_cast<SizeType>(old_end_of_storage - begin_);
       if (AXIO_LIKELY(count > current_capacity)) {
         auto& allocator = InternalAllocator();
         Pointer old_end = end_;
@@ -281,17 +283,21 @@ class Vector {
 
   void Shrink() {
     if (GetEndOfStorage() > end_) {
-      Reallocate(end_ - begin_);
+      Reallocate(static_cast<SizeType>(end_ - begin_));
     }
   }
 
-  AllocatorType GetAllocator() const { return storage_.template Get<0>(); }
+  AllocatorType GetAllocator() const { return Get<0>(storage_); }
 
   Bool IsEmpty() const noexcept { return begin_ == end_; }
 
-  SizeType Size() const noexcept { return end_ - begin_; }
+  SizeType Size() const noexcept {
+    return static_cast<SizeType>(end_ - begin_);
+  }
 
-  SizeType Capacity() const noexcept { return GetEndOfStorage() - begin_; }
+  SizeType Capacity() const noexcept {
+    return static_cast<SizeType>(GetEndOfStorage() - begin_);
+  }
 
   Pointer Data() noexcept { return begin_; }
   ConstPointer Data() const noexcept { return begin_; }
@@ -403,7 +409,7 @@ class Vector {
 
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   void Append(ForwardIt first, ForwardIt last) {
-    const SizeType count = std::distance(first, last);
+    const SizeType count = static_cast<SizeType>(std::distance(first, last));
     Pointer end_of_storage = GetEndOfStorage();
     if (end_ + count > end_of_storage) {
       auto& allocator = InternalAllocator();
@@ -652,8 +658,9 @@ class Vector {
     if (old_begin != old_end) {
       DestroyElements(allocator, old_begin, old_end);
     }
-    AllocatorTraits::deallocate(allocator, old_begin,
-                                old_end_of_storage - old_begin);
+    AllocatorTraits::deallocate(
+        allocator, old_begin,
+        static_cast<SizeType>(old_end_of_storage - old_begin));
   }
 
   Pointer Allocate(AllocatorType& allocator, SizeType capacity) {
@@ -668,7 +675,7 @@ class Vector {
     Pointer old_end_of_storage = GetEndOfStorage();
     Pointer old_begin = Allocate(allocator, new_capacity);
     Pointer old_end = end_;
-    SizeType size = old_end - old_begin;
+    SizeType size = static_cast<SizeType>(old_end - old_begin);
     MoveElements(allocator, begin_, old_begin, old_end);
     Release(allocator, old_begin, old_end, old_end_of_storage);
     end_ = begin_ + size;
@@ -704,13 +711,11 @@ class Vector {
     }
   }
 
-  Pointer& GetEndOfStorage() { return storage_.template Get<1>(); }
-  const Pointer& GetEndOfStorage() const { return storage_.template Get<1>(); }
+  Pointer& GetEndOfStorage() { return Get<1>(storage_); }
+  const Pointer& GetEndOfStorage() const { return Get<1>(storage_); }
 
-  AllocatorType& InternalAllocator() { return storage_.template Get<0>(); }
-  const AllocatorType& InternalAllocator() const {
-    return storage_.template Get<0>();
-  }
+  AllocatorType& InternalAllocator() { return Get<0>(storage_); }
+  const AllocatorType& InternalAllocator() const { return Get<0>(storage_); }
 
   static void DestroyElements(AllocatorType& allocator,
                               Pointer first,
@@ -898,7 +903,7 @@ class Vector {
     }
   }
 
-  CompressedPair<AllocatorType, Pointer /* end of storage */> storage_;
+  Tuple<AllocatorType, Pointer /* end of storage */> storage_;
   Pointer begin_;
   Pointer end_;
 };

@@ -3,10 +3,13 @@
 
 #include "../../base/type_traits.hpp"
 
-namespace axio {
-template <typename... Ts>
-class CompressedTuple;
+#if defined(_MSC_VER)
+#define AXIO_EMPTY_BASES __declspec(empty_bases)
+#else
+#define AXIO_EMPTY_BASES
+#endif
 
+namespace axio {
 template <typename T>
 struct TupleSize;
 template <typename T>
