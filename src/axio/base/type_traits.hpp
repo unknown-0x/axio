@@ -3,6 +3,7 @@
 
 #include "types.hpp"
 
+#include <functional>
 #include <type_traits>
 
 namespace axio {
@@ -428,6 +429,16 @@ struct IsGreaterThanComparable<
 template <typename T>
 struct ShouldUseEBO : BoolConstant<IsEmpty<T>::value && IsClass<T>::value &&
                                    !IsFinal<T>::value> {};
+
+template <typename T>
+struct UnwrapReferenceWrapper {
+  using type = T;
+};
+
+template <typename T>
+struct UnwrapReferenceWrapper<std::reference_wrapper<T>> {
+  using type = T&;
+};
 }  // namespace axio
 
 #endif

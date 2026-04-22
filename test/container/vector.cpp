@@ -1665,7 +1665,7 @@ TEST_CASE(NTVector, Emplace) {
   static constexpr const char* texts[]{"foo", "bar", "baz", "abc"};
 
   for (int i = 0; i < 20; ++i) {
-    const char* value = texts[i % AXIO_ARRAY_SIZE(texts)];
+    const char* value = texts[static_cast<size_t>(i) % AXIO_ARRAY_SIZE(texts)];
     it = v.Emplace(v.begin() + i / 2, value);
     CHECK_EQ(it, v.begin() + i / 2);
     CHECK_EQ(*it, value);
@@ -1887,7 +1887,7 @@ struct MockAllocator {
       std::bool_constant<PropagateMove>;
   int id;
 
-  MockAllocator(int id = 0) : id(id) {}
+  MockAllocator(int id_ = 0) : id(id_) {}
 
   template <typename U>
   MockAllocator(const MockAllocator<U, PropagateCopy, PropagateMove>& other)
