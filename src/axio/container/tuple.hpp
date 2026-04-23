@@ -461,10 +461,10 @@ constexpr Bool TupleLessThanImpl(
                                    Get<Is>(std::declval<const Rhs&>())) &&
                           ...)) {
   Bool result = false;
-  ((Get<Is>(lhs) < Get<Is>(rhs)   ? (result = true, true)
-    : Get<Is>(rhs) < Get<Is>(lhs) ? (result = false, true)
-                                  : false) ||
-   ...);
+  (void)((Get<Is>(lhs) < Get<Is>(rhs)   ? (result = true, true)
+          : Get<Is>(rhs) < Get<Is>(lhs) ? (result = false, true)
+                                        : false) ||
+         ...);
   return result;
 }
 }  // namespace tuple_detail

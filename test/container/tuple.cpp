@@ -27,6 +27,8 @@ constexpr bool ConstexprConstructorTest() {
 
     Tuple<Tuple<>, int> t{{}, 2};
     static_assert(TupleSize<decltype(t)>::value == 2, "");
+
+    AXIO_IGNORE(empty3);
   }
   {
     Tuple<int, int, int> t{};
@@ -411,6 +413,8 @@ constexpr bool ConstexprMakeFromTuple() {
   {
     auto t = MakeTuple();
     Foo res = MakeFromTuple<Foo>(t);
+    ret = ret && (res.foo == 0);
+    ret = ret && (res.bar == 0);
   }
   {
     auto t = MakeTuple(1, 2);
