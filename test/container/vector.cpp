@@ -714,7 +714,7 @@ TEST_CASE(IntVector, InsertForwardIterator) {
   }
 }
 
-TEST_CASE(IntVector, Comparision) {
+TEST_CASE(IntVector, Comparison) {
   {
     IntVector v1{11, 22, 33, 44};
     IntVector v2{11, 22, 33, 44};
@@ -1842,7 +1842,7 @@ TEST_CASE(NTVector, InsertForwardIterator) {
   CHECK_ALIVE_COUNT(13);
 }
 
-TEST_CASE(NTVector, Comparision) {
+TEST_CASE(NTVector, Comparison) {
   {
     NTVector v1{"foo", "bar", "baz"};
     NTVector v2{"foo", "bar", "baz"};

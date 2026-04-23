@@ -103,7 +103,7 @@ TEST_CASE(Array, IteratorsReverse) {
   }
 }
 
-TEST_CASE(Array, Comparisons) {
+TEST_CASE(Array, Comparison) {
   Array<int, 3> a{1, 2, 3};
   Array<int, 3> b{1, 2, 3};
   Array<int, 3> c{1, 2, 4};
