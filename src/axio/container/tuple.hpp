@@ -257,6 +257,9 @@ struct AXIO_EMPTY_BASES Tuple
   }
 };
 
+template <>
+struct Tuple<> {};
+
 template <typename... Ts>
 struct TupleSize<Tuple<Ts...>> : IntegralConstant<SizeT, sizeof...(Ts)> {};
 
@@ -391,7 +394,7 @@ template <typename R, SizeT... Os, SizeT... Is, typename TupleOfTuples>
 constexpr R TupleCatImpl(std::index_sequence<Os...>,
                          std::index_sequence<Is...>,
                          TupleOfTuples&& t) {
-  return R(Get<Is>(Get<Os>(t))...);
+  return R(Get<Is>(Get<Os>(Forward<TupleOfTuples>(t)))...);
 }
 }  // namespace tuple_detail
 
