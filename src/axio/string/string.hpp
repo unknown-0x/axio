@@ -199,15 +199,18 @@ class BasicString : private internal::AllocatorHolder<A> {
 
   Storage storage_;
 
+  static constexpr unsigned char kHeapMask = 0x40;
+
   static constexpr SizeType kModeByteOffset =
       Endian::kNative == Endian::kLittle ? sizeof(HeapStorage) - 1 : 0;
 
   static constexpr SizeType kCapacityMask =
-      Endian::kNative == Endian::kLittle ? SizeType(0x00FFFFFFFFFFFFFFULL)
-                                         : SizeType(0xFFFFFFFFFFFFFF00ULL);
+      Endian::kNative == Endian::kLittle
+          ? ~(SizeType(0xFF) << ((sizeof(SizeType) - 1) * 8))
+          : ~SizeType(0xFF);
 
   Bool IsSSO() const noexcept {
-    return (storage_.raw[kModeByteOffset] & 0x40) == 0;  // 0x40 = 0100 0000
+    return (storage_.raw[kModeByteOffset] & kHeapMask) == 0;
   }
 
   void SetModeAsSSO(unsigned char len) {
@@ -216,7 +219,7 @@ class BasicString : private internal::AllocatorHolder<A> {
         static_cast<unsigned char>(kSSOCapacity - len);
   }
 
-  void SetModeAsHeap() { storage_.raw[kModeByteOffset] = 0x40; }
+  void SetModeAsHeap() { storage_.raw[kModeByteOffset] |= kHeapMask; }
 
   void SetHeapCapacity(SizeType n) {
     storage_.heap.capacity =
