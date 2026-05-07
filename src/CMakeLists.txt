@@ -3,6 +3,7 @@ add_library(
     axio/axio.cpp
     axio/base/arch.hpp
     axio/base/compiler.hpp
+    axio/base/endianness.hpp
     axio/base/macros.hpp
     axio/base/os.hpp
     axio/base/type_traits.hpp
@@ -13,6 +14,8 @@ add_library(
     axio/container/detail/iterator_traits.hpp
     axio/container/detail/tuple_fwd.hpp
     axio/memory/allocator.hpp
+    axio/string/char_traits.hpp
+    axio/string/string.hpp
     axio/utility/forward.hpp
     axio/utility/move.hpp
 )

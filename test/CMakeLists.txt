@@ -42,3 +42,13 @@ axio_test(
     utility/forward.cpp
     utility/move.cpp
 )
+
+axio_test(
+    string_test
+    string/template/string_test.hpp
+    string/string.cpp
+    string/u8string.cpp
+    string/u16string.cpp
+    string/u32string.cpp
+    string/wstring.cpp
+)
