@@ -51,18 +51,19 @@ auto ArraySizeImpl(const T (&arr)[N]) -> char (&)[N];
 #endif
 
 #if AXIO_HAS_BUILTIN(__builtin_expect) || defined(AXIO_COMPILER_GCC)
-#define AXIO_LIKELY(x) (__builtin_expect(!!(x), true))
-#define AXIO_UNLIKELY(x) (__builtin_expect(!!(x), false))
+#define AXIO_LIKELY(...) (__builtin_expect(!!(__VA_ARGS__), true))
+#define AXIO_UNLIKELY(...) (__builtin_expect(!!(__VA_ARGS__), false))
 #else
-#define AXIO_LIKELY(x) (x)
-#define AXIO_UNLIKELY(x) (x)
+#define AXIO_LIKELY(...) (__VA_ARGS__)
+#define AXIO_UNLIKELY(...) (__VA_ARGS__)
 #endif
 
 #ifdef NDEBUG
-#define AXIO_ASSERT(expr) ((void)(false && (expr)))
+#define AXIO_ASSERT(...) ((void)(false && (__VA_ARGS__)))
 #else
-#define AXIO_ASSERT(expr) \
-  (AXIO_LIKELY((expr)) ? (void)0 : [] { assert(false && #expr); }())
+#define AXIO_ASSERT(...)                \
+  (AXIO_LIKELY((__VA_ARGS__)) ? (void)0 \
+                              : [] { assert(false && #__VA_ARGS__); }())
 #endif
 
 #define AXIO_MAX(a, b) (a > b ? a : b)

@@ -284,7 +284,7 @@ TEST_CASE(TypeTraits, IsEqualityComparable) {
   IGNORE_RESULT();
 
   struct Foo {
-    bool operator==(const Foo&) { return true; }
+    bool operator==(const Foo&) const { return true; }
   };
 
   static_assert(axio::IsEqualityComparable<int>::value, "");
