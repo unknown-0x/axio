@@ -31,7 +31,8 @@ jobs:
       - name: Configure
         run: |
           cmake --preset ${{ matrix.compiler }}-${{ matrix.build_type }} `
-                -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }}
+                -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }} `
+                -DCMAKE_CXX_STANDARD=20
       - name: Build
         run: |
           cmake --build --preset ${{ matrix.compiler }}-${{ matrix.build_type }}
@@ -61,7 +62,8 @@ jobs:
       - name: Configure
         run: |
           cmake --preset ${{ matrix.compiler }}-${{ matrix.build_type }} `
-                -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }}
+                -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }} `
+                -DCMAKE_CXX_STANDARD=20
       - name: Build
         run: cmake --build --preset ${{ matrix.compiler }}-${{ matrix.build_type }}
       - name: Test
@@ -93,7 +95,7 @@ jobs:
           pacboy: cc:p cmake:p ninja:p lld:p
       - name: Configure
         run: |
-          cmake --preset ninja-${{ matrix.build_type }} -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }}
+          cmake --preset ninja-${{ matrix.build_type }} -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }} -DCMAKE_CXX_STANDARD=20
       - name: Build
         run: cmake --build --preset ninja-${{ matrix.build_type }}
       - name: Test
@@ -134,7 +136,8 @@ jobs:
       - name: Configure
         run: |
           cmake --preset ninja-${{ matrix.build_type }} \
-                -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }}
+                -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }} \
+                -DCMAKE_CXX_STANDARD=20
       - name: Build
         run: cmake --build --preset ninja-${{ matrix.build_type }}
       - name: Test
@@ -175,7 +178,8 @@ jobs:
       - name: Configure
         run: |
           cmake --preset ninja-${{ matrix.build_type }} \
-                -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }}
+                -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }} \
+                -DCMAKE_CXX_STANDARD=20
       - name: Build
         run: cmake --build --preset ninja-${{ matrix.build_type }}
       - name: Test
@@ -208,7 +212,8 @@ jobs:
       - name: Configure
         run: |
           cmake --preset ninja-${{ matrix.build_type }} \
-                -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }}
+                -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs.value }} \
+                -DCMAKE_CXX_STANDARD=20
       - name: Build
         run: |
           cmake --build --preset ninja-${{ matrix.build_type }}
