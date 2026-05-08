@@ -44,8 +44,8 @@ template <typename, typename...>
 struct AXIO_EMPTY_BASES TupleImpl;
 
 template <SizeT... Is, typename... Ts>
-struct AXIO_EMPTY_BASES TupleImpl<std::index_sequence<Is...>, Ts...>
-    : TupleValue<Is, Ts>... {
+struct AXIO_EMPTY_BASES
+    TupleImpl<std::index_sequence<Is...>, Ts...> : TupleValue<Is, Ts>... {
   constexpr TupleImpl() = default;
 
   constexpr explicit TupleImpl(const Ts&... args)

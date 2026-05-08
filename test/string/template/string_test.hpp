@@ -196,7 +196,7 @@ STRING_TEST_CASE(String, InitListConstructor) {
     const SizeType size;
   };
 
-  static constexpr InitListTestCase test_cases[] = {
+  static const InitListTestCase test_cases[] = {
       InitListTestCase{{}, TEXT(""), 0},
 
       InitListTestCase{{TEXT('A')}, TEXT("A"), 1},
@@ -232,10 +232,10 @@ STRING_TEST_CASE(String, InitListConstructor) {
           TEXT("this is long"),
           12}};
 
-  for (const auto& tc : test_cases) {
-    String s(tc.values);
-    CHECK_EQ(s.Size(), tc.size);
-    CHECK_STR_EQ(s.CStr(), tc.text);
+  for (const auto& test : test_cases) {
+    String s(test.values);
+    CHECK_EQ(s.Size(), test.size);
+    CHECK_STR_EQ(s.CStr(), test.text);
   }
 }
 
