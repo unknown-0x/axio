@@ -1,6 +1,7 @@
 #ifndef AXIO_STRING_STRING_HPP_
 #define AXIO_STRING_STRING_HPP_
 
+#include <stdexcept>
 #include <string>
 
 #include "../base/endianness.hpp"
@@ -53,6 +54,7 @@ class BasicString : private internal::AllocatorHolder<A> {
   using ConstReverseIterator = std::reverse_iterator<ConstIterator>;
 
   static constexpr SizeType kNpos = SizeType(-1);
+  static constexpr SizeType kGrowthFactor = SizeType(2);
   static constexpr ValueType kNullTerminator = ValueType();
 
   static_assert(!IsArray<ValueType>::value,
@@ -153,10 +155,16 @@ class BasicString : private internal::AllocatorHolder<A> {
     }
   }
 
+  AllocatorType GetAllocator() const { return this->GetAlloc(); }
+
+  Bool IsEmpty() const noexcept { return Size() == 0; }
+
   SizeType Size() const noexcept {
     return IsSSO() ? kSSOCapacity - storage_.raw[kModeByteOffset]
                    : storage_.heap.size;
   }
+
+  SizeType Length() const noexcept { return Size(); }
 
   SizeType Capacity() const noexcept {
     return IsSSO() ? kSSOCapacity : GetHeapCapacity();
@@ -171,6 +179,152 @@ class BasicString : private internal::AllocatorHolder<A> {
   }
 
   ConstPointer CStr() const noexcept { return Data(); }
+
+  SizeType MaxSize() const noexcept {
+    static constexpr auto kMaxSz =
+        std::numeric_limits<SizeType>::max() / sizeof(ValueType);
+    return std::min(kMaxSz, AllocatorTraits::max_size(this->GetAlloc())) - 1;
+  }
+
+  Reference At(SizeType pos) {
+    if (AXIO_LIKELY(pos >= Size())) {
+      throw std::out_of_range("BasicString::At(SizeType) - index out of range");
+    }
+    return Data()[pos];
+  }
+
+  ConstReference At(SizeType pos) const {
+    if (AXIO_LIKELY(pos >= Size())) {
+      throw std::out_of_range(
+          "BasicString::At(SizeType) const - index out of range");
+    }
+    return Data()[pos];
+  }
+
+  Reference operator[](SizeType pos) {
+    AXIO_ASSERT(pos < Size());
+    return *(Data() + pos);
+  }
+
+  ConstReference operator[](SizeType pos) const {
+    AXIO_ASSERT(pos < Size());
+    return *(Data() + pos);
+  }
+
+  Reference Front() {
+    AXIO_ASSERT(!IsEmpty());
+    return *begin();
+  }
+
+  ConstReference Front() const {
+    AXIO_ASSERT(!IsEmpty());
+    return *begin();
+  }
+
+  Reference Back() {
+    AXIO_ASSERT(!IsEmpty());
+    return *(end() - 1);
+  }
+
+  ConstReference Back() const {
+    AXIO_ASSERT(!IsEmpty());
+    return *(end() - 1);
+  }
+
+  Iterator begin() noexcept { return Data(); }
+  Iterator end() noexcept { return Data() + Size(); }
+
+  ConstIterator begin() const noexcept { return Data(); }
+  ConstIterator end() const noexcept { return Data() + Size(); }
+
+  ConstIterator cbegin() const noexcept { return Data(); }
+  ConstIterator cend() const noexcept { return Data() + Size(); }
+
+  ReverseIterator rbegin() noexcept { return ReverseIterator(Data() + Size()); }
+  ReverseIterator rend() noexcept { return ReverseIterator(Data()); }
+
+  ConstReverseIterator rbegin() const noexcept {
+    return ConstReverseIterator(Data() + Size());
+  }
+  ConstReverseIterator rend() const noexcept {
+    return ConstReverseIterator(Data());
+  }
+
+  ConstReverseIterator crbegin() const noexcept {
+    return ConstReverseIterator(Data() + Size());
+  }
+  ConstReverseIterator crend() const noexcept {
+    return ConstReverseIterator(Data());
+  }
+
+  void Clear() { IsSSO() ? SetModeAsSSO(0) : SetHeapSize(0); }
+
+  void Resize(SizeType n, ValueType c = kNullTerminator) {
+    const auto old_size = Size();
+    if (n == old_size)
+      return;
+
+    if (n < old_size) {
+      IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(n)) : SetHeapSize(n);
+      return;
+    }
+
+    if (n > Capacity()) {
+      Reallocate(n);
+    }
+
+    if (IsSSO()) {
+      Traits::assign(storage_.sso.data + old_size, n - old_size, c);
+      SetModeAsSSO(static_cast<unsigned char>(n));
+      return;
+    }
+
+    Traits::assign(storage_.heap.data + old_size, n - old_size, c);
+    SetHeapSize(n);
+  }
+
+  void Reserve(SizeType new_capacity) {
+    if (new_capacity > Capacity()) {
+      Reallocate(new_capacity);
+    }
+  }
+
+  void Shrink() {
+    const SizeType size = Size();
+
+    const auto is_sso = IsSSO();
+    if ((is_sso && size <= kSSOCapacity) || (!is_sso && size == Capacity())) {
+      return;
+    }
+
+    if (size <= kSSOCapacity) {
+      auto old_data = storage_.heap.data;
+      const auto old_capacity = storage_.heap.capacity;
+      Traits::copy(storage_.sso.data, old_data, size);
+      AllocatorTraits::deallocate(this->GetAlloc(), old_data, old_capacity + 1);
+      SetModeAsSSO(static_cast<unsigned char>(size));
+      return;
+    }
+
+    Reallocate(size);
+  }
+
+  Reference Push(ValueType c) {
+    const auto old_size = Size();
+    const auto new_size = old_size + 1;
+    const auto old_capacity = Capacity();
+    if (new_size > old_capacity) {
+      Reallocate(ComputeCapacity(old_capacity, 1));
+    }
+
+    auto data = Data();
+    data[old_size] = c;
+
+    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(new_size))
+            : SetHeapSize(new_size);
+
+    return data[old_size];
+  }
 
  private:
   struct HeapStorage {
@@ -247,7 +401,100 @@ class BasicString : private internal::AllocatorHolder<A> {
     SetHeapSize(n);
     return storage_.heap.data;
   }
+
+  void Reallocate(SizeType new_capacity) {
+    const auto size = Size();
+    auto new_data =
+        AllocatorTraits::allocate(this->GetAlloc(), new_capacity + 1);
+    Traits::copy(new_data, Data(), size);
+    if (!IsSSO()) {
+      AllocatorTraits::deallocate(this->GetAlloc(), storage_.heap.data,
+                                  storage_.heap.capacity + 1);
+    }
+    storage_.heap.data = new_data;
+    storage_.heap.capacity = new_capacity;
+    SetHeapSize(size);
+    SetModeAsHeap();
+  }
+
+  SizeType ComputeCapacity(SizeType old_capacity, SizeType add_size) {
+    const auto remaining = MaxSize() - old_capacity;
+    if (add_size > remaining) {
+      throw std::length_error("BasicString capacity overflow");
+    }
+    auto required = old_capacity + add_size;
+    auto new_capacity = old_capacity * kGrowthFactor;
+    return AXIO_MAX(required, new_capacity);
+  }
 };
+
+// ========================================================= //
+
+template <typename T, typename Traits, typename A>
+Bool operator==(const BasicString<T, Traits, A>& lhs,
+                const BasicString<T, Traits, A>& rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator!=(const BasicString<T, Traits, A>& lhs,
+                const BasicString<T, Traits, A>& rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator>=(const BasicString<T, Traits, A>& lhs,
+                const BasicString<T, Traits, A>& rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator<=(const BasicString<T, Traits, A>& lhs,
+                const BasicString<T, Traits, A>& rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator>(const BasicString<T, Traits, A>& lhs,
+               const BasicString<T, Traits, A>& rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator<(const BasicString<T, Traits, A>& lhs,
+               const BasicString<T, Traits, A>& rhs);
+
+// ========================================================= //
+
+template <typename T, typename Traits, typename A>
+Bool operator==(const BasicString<T, Traits, A>& lhs, const T* rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator!=(const BasicString<T, Traits, A>& lhs, const T* rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator>=(const BasicString<T, Traits, A>& lhs, const T* rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator<=(const BasicString<T, Traits, A>& lhs, const T* rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator>(const BasicString<T, Traits, A>& lhs, const T* rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator<(const BasicString<T, Traits, A>& lhs, const T* rhs);
+
+// ========================================================= //
+
+template <typename T, typename Traits, typename A>
+Bool operator==(const T* lhs, const BasicString<T, Traits, A>& rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator!=(const T* lhs, const BasicString<T, Traits, A>& rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator>=(const T* lhs, const BasicString<T, Traits, A>& rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator<=(const T* lhs, const BasicString<T, Traits, A>& rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator>(const T* lhs, const BasicString<T, Traits, A>& rhs);
+
+template <typename T, typename Traits, typename A>
+Bool operator<(const T* lhs, const BasicString<T, Traits, A>& rhs);
+
+// ========================================================= //
 
 using String = BasicString<char>;
 using WString = BasicString<wchar_t>;
