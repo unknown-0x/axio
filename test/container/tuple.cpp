@@ -400,7 +400,7 @@ struct Foo {
   int foo;
   int bar;
 
-  constexpr Foo() : foo(0), bar(0) {};
+  constexpr Foo() : foo(0), bar(0) {}
   constexpr Foo(int f, int b) : foo(f), bar(b) {}
 };
 
@@ -975,7 +975,7 @@ TEST_CASE(Tuple, MakeFromTuple) {
     int x;
     double y;
     std::string z;
-    Bar(int i, double d, const std::string& s) : x(i), y(d), z(s) {};
+    Bar(int i, double d, const std::string& s) : x(i), y(d), z(s) {}
   };
   auto t = MakeTuple(1, 3.14, "foo");
   auto b = MakeFromTuple<Bar>(t);
