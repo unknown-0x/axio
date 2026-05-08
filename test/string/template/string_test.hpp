@@ -191,12 +191,16 @@ STRING_TEST_CASE(String, HeapBoundaryJustAboveSSO) {
 
 STRING_TEST_CASE(String, InitListConstructor) {
   struct InitListTestCase {
-    std::initializer_list<CHAR> values;
+    InitListTestCase(std::initializer_list<CHAR> values,
+                     const CHAR* txt,
+                     const SizeType sz)
+        : s(values), text(txt), size(sz) {}
+    String s;
     const CHAR* text;
     const SizeType size;
   };
 
-  static const InitListTestCase test_cases[] = {
+  const InitListTestCase test_cases[] = {
       InitListTestCase{{}, TEXT(""), 0},
 
       InitListTestCase{{TEXT('A')}, TEXT("A"), 1},
@@ -233,9 +237,8 @@ STRING_TEST_CASE(String, InitListConstructor) {
           12}};
 
   for (const auto& test : test_cases) {
-    String s(test.values);
-    CHECK_EQ(s.Size(), test.size);
-    CHECK_STR_EQ(s.CStr(), test.text);
+    CHECK_EQ(test.s.Size(), test.size);
+    CHECK_STR_EQ(test.s.CStr(), test.text);
   }
 }
 
