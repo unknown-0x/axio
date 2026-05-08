@@ -5,8 +5,7 @@
     "minor": 15,
     "patch": 0
   },
-  "configurePresets": [
-    {
+  "configurePresets": [{
       "name": "base",
       "hidden": true,
       "binaryDir": "${sourceDir}/output/build/${presetName}",
@@ -55,8 +54,7 @@
       "inherits": ["ninja-base", "windows-base"],
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl",
-        "CMAKE_CXX_COMPILER": "cl",
-        "CMAKE_LINKER": "link"
+        "CMAKE_CXX_COMPILER": "cl"
       }
     },
     {
@@ -65,8 +63,7 @@
       "inherits": ["ninja-base", "windows-base"],
       "cacheVariables": {
         "CMAKE_C_COMPILER": "clang-cl",
-        "CMAKE_CXX_COMPILER": "clang-cl",
-        "CMAKE_LINKER": "link"
+        "CMAKE_CXX_COMPILER": "clang-cl"
       }
     },
 
@@ -95,8 +92,7 @@
       "inherits": ["msvc-clang-base", "release"]
     }
   ],
-  "buildPresets": [
-    {
+  "buildPresets": [{
       "name": "ninja-debug",
       "configurePreset": "ninja-debug"
     },
@@ -121,8 +117,7 @@
       "configurePreset": "msvc-clang-release"
     }
   ],
-  "testPresets": [
-    {
+  "testPresets": [{
       "name": "ninja-debug",
       "configurePreset": "ninja-debug"
     },
