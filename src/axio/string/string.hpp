@@ -5,8 +5,9 @@
 #include <string>
 
 #include "../base/endianness.hpp"
-#include "../container/tuple.hpp"
+#include "../container/detail/iterator_traits.hpp"
 #include "../memory/allocator.hpp"
+#include "../utility/move.hpp"
 
 namespace axio {
 namespace internal {
@@ -38,6 +39,25 @@ class BasicString : private internal::AllocatorHolder<A> {
   using AllocatorHolder = internal::AllocatorHolder<A>;
   using AllocatorTraits = std::allocator_traits<A>;
 
+  template <typename It>
+  using EnableIfForwardIt =
+      typename EnableIf<IsForwardIterator<It>::value, int>::type;
+
+  template <typename It>
+  using EnableIfNotForwardIt =
+      typename EnableIf<IsInputIterator<It>::value &&
+                            !IsForwardIterator<It>::value,
+                        int>::type;
+
+  template <typename U>
+  struct IsContiguousIterator : FalseType {};
+
+  template <typename U>
+  struct IsContiguousIterator<U*> : TrueType {};
+
+  template <typename U>
+  struct IsContiguousIterator<const U*> : TrueType {};
+
  public:
   using TraitsType = Traits;
   using ValueType = T;
@@ -64,6 +84,16 @@ class BasicString : private internal::AllocatorHolder<A> {
   static_assert(IsTriviallyCopyable<ValueType>::value,
                 "ValueType must be trivially copyable");
 
+ private:
+  using StringViewType = std::basic_string_view<ValueType, TraitsType>;
+
+  template <typename StringViewLike, typename Dummy>
+  using EnableIfIsStringViewLike = typename EnableIf<
+      IsConvertible<const StringViewLike&, StringViewType>::value &&
+          !IsConvertible<const StringViewLike&, ConstPointer>::value,
+      Dummy>::type;
+
+ public:
   BasicString() noexcept(noexcept(AllocatorType())) : AllocatorHolder() {
     SetModeAsSSO(0);
   }
@@ -75,39 +105,87 @@ class BasicString : private internal::AllocatorHolder<A> {
 
   BasicString(ConstPointer s, const AllocatorType& allocator = AllocatorType())
       : AllocatorHolder(allocator) {
-    const SizeType n = Traits::length(s);
-    Traits::copy(InitWithSize(n), s, n);
+    const SizeType n = TraitsType::length(s);
+    TraitsType::copy(InitWithSize(n), s, n);
   }
 
   BasicString(ConstPointer s,
               SizeType count,
               const AllocatorType& allocator = AllocatorType())
       : AllocatorHolder(allocator) {
-    Traits::copy(InitWithSize(count), s, count);
+    TraitsType::copy(InitWithSize(count), s, count);
   }
 
   BasicString(SizeType count,
               ValueType c,
               const AllocatorType& allocator = AllocatorType())
       : AllocatorHolder(allocator) {
-    Traits::assign(InitWithSize(count), count, c);
+    TraitsType::assign(InitWithSize(count), count, c);
   }
 
-  template <typename InputIt>
+  template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
   BasicString(InputIt first,
               InputIt last,
-              const AllocatorType& allocator = AllocatorType());
+              const AllocatorType& allocator = AllocatorType())
+      : AllocatorHolder(allocator) {
+    SetModeAsSSO(0);
+    while (first != last) {
+      Push(*first++);
+    }
+  }
+
+  template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
+  BasicString(ForwardIt first,
+              ForwardIt last,
+              const AllocatorType& allocator = AllocatorType())
+      : AllocatorHolder(allocator) {
+    const auto n = static_cast<SizeType>(std::distance(first, last));
+    Pointer data = InitWithSize(n);
+
+    if constexpr (IsContiguousIterator<
+                      typename Decay<ForwardIt>::type>::value) {
+      TraitsType::copy(data, first, n);
+    } else {
+      for (; first != last; ++first, ++data) {
+        TraitsType::assign(*data, *first);
+      }
+    }
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  explicit BasicString(const StringViewLike& sv,
+                       const AllocatorType& allocator = AllocatorType())
+      : AllocatorHolder(allocator) {
+    const StringViewType view(sv);
+    const auto n = static_cast<SizeType>(view.size());
+    TraitsType::copy(InitWithSize(n), view.data(), n);
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  BasicString(const StringViewLike& sv,
+              SizeType pos,
+              SizeType count = kNpos,
+              const AllocatorType& allocator = AllocatorType())
+      : AllocatorHolder(allocator) {
+    const StringViewType view(sv);
+    const auto size = static_cast<SizeType>(view.size());
+    const auto n =
+        (count == kNpos || pos + count > size) ? (size - pos) : count;
+    TraitsType::copy(InitWithSize(n), view.data() + pos, n);
+  }
 
   BasicString(std::initializer_list<ValueType> values,
               const AllocatorType& allocator = AllocatorType())
       : AllocatorHolder(allocator) {
     const auto n = static_cast<SizeType>(values.size());
-    Traits::copy(InitWithSize(n), values.begin(), n);
+    TraitsType::copy(InitWithSize(n), values.begin(), n);
   }
 
   BasicString(const BasicString& other) : AllocatorHolder(other.GetAlloc()) {
     const auto n = other.Size();
-    Traits::copy(InitWithSize(n), other.Data(), n);
+    TraitsType::copy(InitWithSize(n), other.Data(), n);
   }
 
   BasicString(BasicString&& other) noexcept
@@ -119,7 +197,7 @@ class BasicString : private internal::AllocatorHolder<A> {
   BasicString(const BasicString& other, const AllocatorType& allocator)
       : AllocatorHolder(allocator) {
     const auto n = other.Size();
-    Traits::copy(InitWithSize(n), other.Data(), n);
+    TraitsType::copy(InitWithSize(n), other.Data(), n);
   }
 
   BasicString(BasicString&& other, const AllocatorType& allocator)
@@ -131,7 +209,7 @@ class BasicString : private internal::AllocatorHolder<A> {
     }
 
     const auto n = other.Size();
-    Traits::copy(InitWithSize(n), other.Data(), n);
+    TraitsType::copy(InitWithSize(n), other.Data(), n);
   }
 
   BasicString(const BasicString& other,
@@ -143,16 +221,201 @@ class BasicString : private internal::AllocatorHolder<A> {
     AXIO_ASSERT(pos <= n);
     const auto actual_count =
         (count == kNpos || pos + count > n) ? (n - pos) : count;
-    Traits::copy(InitWithSize(actual_count), other.Data() + pos, actual_count);
+    TraitsType::copy(InitWithSize(actual_count), other.Data() + pos,
+                     actual_count);
   }
 
   BasicString(NullPtrT) = delete;
 
-  ~BasicString() {
-    if (!IsSSO()) {
-      AllocatorTraits::deallocate(this->GetAlloc(), storage_.heap.data,
-                                  storage_.heap.capacity + 1);
+  ~BasicString() { Release(this->GetAlloc()); }
+
+  operator StringViewType() const noexcept {
+    return StringViewType(Data(), Size());
+  }
+
+  BasicString& operator=(const BasicString& other) {
+    if (this == &other) {
+      return *this;
     }
+
+    if constexpr (AllocatorTraits::propagate_on_container_copy_assignment::
+                      value) {
+      auto& allocator = this->GetAlloc();
+      const auto& other_allocator = other.GetAlloc();
+      if (allocator != other_allocator) {
+        Release(allocator);
+        allocator = other_allocator;
+        const auto size = other.Size();
+        Traits::copy(InitWithSize(size), other.Data(), size);
+        return *this;
+      }
+    }
+
+    Assign(other.Data(), other.Size());
+    return *this;
+  }
+
+  BasicString& operator=(BasicString&& other) noexcept(
+      noexcept(AllocatorTraits::propagate_on_container_move_assignment::value ||
+               AllocatorTraits::is_always_equal::value)) {
+    if (this == &other) {
+      return *this;
+    }
+
+    auto& allocator = this->GetAlloc();
+
+    constexpr bool kCanStealStorage =
+        AllocatorTraits::propagate_on_container_move_assignment::value ||
+        AllocatorTraits::is_always_equal::value;
+
+    if (kCanStealStorage || allocator == other.GetAlloc()) {
+      Release(allocator);
+      if constexpr (AllocatorTraits::propagate_on_container_move_assignment::
+                        value) {
+        allocator = Move(other.GetAlloc());
+      }
+      storage_ = other.storage_;
+      other.SetModeAsSSO(0);
+    } else {
+      Assign(other.Data(), other.Size());
+    }
+
+    return *this;
+  }
+
+  BasicString& operator=(ConstPointer s) {
+    return Assign(s, TraitsType::length(s));
+  }
+
+  BasicString& operator=(ValueType c) {
+    if (IsSSO()) {
+      TraitsType::assign(storage_.sso.data[0], c);
+      SetModeAsSSO(1);
+    } else {
+      TraitsType::assign(storage_.heap.data[0], c);
+      SetHeapSize(1);
+    }
+    return *this;
+  }
+
+  BasicString& operator=(std::initializer_list<ValueType> values) {
+    return Assign(values.begin(), static_cast<SizeType>(values.size()));
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  BasicString& operator=(const StringViewLike& sv) {
+    const StringViewType view(sv);
+    return Assign(view.data(), static_cast<SizeType>(view.size()));
+  }
+
+  BasicString& operator=(NullPtrT) = delete;
+
+  BasicString& Assign(const BasicString& other) { return operator=(other); }
+
+  BasicString& Assign(BasicString&& other) noexcept(
+      AllocatorTraits::propagate_on_container_move_assignment::value ||
+      AllocatorTraits::is_always_equal::value) {
+    return operator=(Move(other));
+  }
+
+  BasicString& Assign(SizeType n, ValueType c) {
+    if (n <= Capacity()) {
+      if (IsSSO()) {
+        SetModeAsSSO(static_cast<unsigned char>(n));
+        TraitsType::assign(storage_.sso.data, n, c);
+      } else {
+        SetHeapSize(n);
+        TraitsType::assign(storage_.heap.data, n, c);
+      }
+      return *this;
+    }
+    Release(this->GetAlloc());
+    TraitsType::assign(InitWithSize(n), n, c);
+    return *this;
+  }
+
+  BasicString& Assign(ConstPointer s) {
+    return Assign(s, TraitsType::length(s));
+  }
+
+  BasicString& Assign(ConstPointer s, SizeType n) {
+    if (n <= Capacity()) {
+      if (IsSSO()) {
+        SetModeAsSSO(static_cast<unsigned char>(n));
+        TraitsType::copy(storage_.sso.data, s, n);
+      } else {
+        SetHeapSize(n);
+        TraitsType::copy(storage_.heap.data, s, n);
+      }
+      return *this;
+    }
+    Release(this->GetAlloc());
+    TraitsType::copy(InitWithSize(n), s, n);
+    return *this;
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  BasicString& Assign(const StringViewLike& sv) {
+    const StringViewType view(sv);
+    return Assign(view.data(), static_cast<SizeType>(view.size()));
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  BasicString& Assign(const StringViewLike& sv,
+                      SizeType pos,
+                      SizeType count = kNpos) {
+    const StringViewType view(sv);
+    const auto size = static_cast<SizeType>(view.size());
+    const auto n =
+        (count == kNpos || pos + count > size) ? (size - pos) : count;
+    return Assign(view.data() + pos, n);
+  }
+
+  BasicString& Assign(const BasicString& other,
+                      SizeType pos,
+                      SizeType count = kNpos) {
+    const auto size = other.Size();
+    const auto n =
+        (count == kNpos || pos + count > size) ? (size - pos) : count;
+    return Assign(other.Data() + pos, n);
+  }
+
+  BasicString& Assign(std::initializer_list<ValueType> values) {
+    return Assign(values.begin(), static_cast<SizeType>(values.size()));
+  }
+
+  template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
+  BasicString& Assign(InputIt first, InputIt last) {
+    Clear();
+    while (first != last) {
+      Push(*first++);
+    }
+    return *this;
+  }
+
+  template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
+  BasicString& Assign(ForwardIt first, ForwardIt last) {
+    const auto n = static_cast<SizeType>(std::distance(first, last));
+
+    if (n > Capacity()) {
+      Release(this->GetAlloc());
+      InitWithSize(n);
+    }
+
+    Pointer data = Data();
+    if constexpr (IsContiguousIterator<
+                      typename Decay<ForwardIt>::type>::value) {
+      TraitsType::copy(data, first, n);
+    } else {
+      for (; first != last; ++first, ++data) {
+        TraitsType::assign(*data, *first);
+      }
+    }
+
+    return *this;
   }
 
   AllocatorType GetAllocator() const { return this->GetAlloc(); }
@@ -274,12 +537,12 @@ class BasicString : private internal::AllocatorHolder<A> {
     }
 
     if (IsSSO()) {
-      Traits::assign(storage_.sso.data + old_size, n - old_size, c);
+      TraitsType::assign(storage_.sso.data + old_size, n - old_size, c);
       SetModeAsSSO(static_cast<unsigned char>(n));
       return;
     }
 
-    Traits::assign(storage_.heap.data + old_size, n - old_size, c);
+    TraitsType::assign(storage_.heap.data + old_size, n - old_size, c);
     SetHeapSize(n);
   }
 
@@ -300,7 +563,7 @@ class BasicString : private internal::AllocatorHolder<A> {
     if (size <= kSSOCapacity) {
       auto old_data = storage_.heap.data;
       const auto old_capacity = storage_.heap.capacity;
-      Traits::copy(storage_.sso.data, old_data, size);
+      TraitsType::copy(storage_.sso.data, old_data, size);
       AllocatorTraits::deallocate(this->GetAlloc(), old_data, old_capacity + 1);
       SetModeAsSSO(static_cast<unsigned char>(size));
       return;
@@ -404,13 +667,11 @@ class BasicString : private internal::AllocatorHolder<A> {
 
   void Reallocate(SizeType new_capacity) {
     const auto size = Size();
-    auto new_data =
-        AllocatorTraits::allocate(this->GetAlloc(), new_capacity + 1);
-    Traits::copy(new_data, Data(), size);
-    if (!IsSSO()) {
-      AllocatorTraits::deallocate(this->GetAlloc(), storage_.heap.data,
-                                  storage_.heap.capacity + 1);
-    }
+    auto& allocator = this->GetAlloc();
+    auto new_data = AllocatorTraits::allocate(allocator, new_capacity + 1);
+    TraitsType::copy(new_data, Data(), size);
+    Release(allocator);
+
     storage_.heap.data = new_data;
     storage_.heap.capacity = new_capacity;
     SetHeapSize(size);
@@ -425,6 +686,13 @@ class BasicString : private internal::AllocatorHolder<A> {
     auto required = old_capacity + add_size;
     auto new_capacity = old_capacity * kGrowthFactor;
     return AXIO_MAX(required, new_capacity);
+  }
+
+  void Release(AllocatorType& allocator) {
+    if (!IsSSO()) {
+      AllocatorTraits::deallocate(allocator, storage_.heap.data,
+                                  storage_.heap.capacity + 1);
+    }
   }
 };
 

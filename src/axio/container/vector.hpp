@@ -142,11 +142,11 @@ class Vector {
         const auto& other_allocator = other.InternalAllocator();
         if (allocator != other_allocator) {
           Pointer& end_of_storage = GetEndOfStorage();
-          Release(InternalAllocator(), begin_, end_, end_of_storage);
+          Release(allocator, begin_, end_, end_of_storage);
           begin_ = nullptr;
           end_ = nullptr;
           end_of_storage = nullptr;
-          InternalAllocator() = other.InternalAllocator();
+          allocator = other_allocator;
         }
       }
       Assign(other.begin_, other.end_);

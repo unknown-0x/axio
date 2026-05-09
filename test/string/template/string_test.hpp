@@ -99,23 +99,23 @@ STRING_TEST_CASE(String, FillConstructor) {
 }
 
 STRING_TEST_CASE(String, CopyConstructor) {
-  for (const auto& tc : kTestCases) {
-    String s(tc.text);
+  for (const auto& test : kTestCases) {
+    String s(test.text);
     String copy(s);
     CHECK_EQ(copy.Size(), s.Size());
-    CHECK_EQ(copy.Size(), tc.size);
-    CHECK_STR_EQ(copy.CStr(), tc.text);
-    CHECK_STR_EQ(s.CStr(), tc.text);
+    CHECK_EQ(copy.Size(), test.size);
+    CHECK_STR_EQ(copy.CStr(), test.text);
+    CHECK_STR_EQ(s.CStr(), test.text);
   }
 }
 
 STRING_TEST_CASE(String, MoveConstructor) {
-  for (const auto& tc : kTestCases) {
-    String s(tc.text);
+  for (const auto& test : kTestCases) {
+    String s(test.text);
     String moved(axio::Move(s));
 
-    CHECK_EQ(moved.Size(), tc.size);
-    CHECK_STR_EQ(moved.CStr(), tc.text);
+    CHECK_EQ(moved.Size(), test.size);
+    CHECK_STR_EQ(moved.CStr(), test.text);
 
     CHECK_EQ(s.Size(), 0);
     CHECK_STR_EQ(s.CStr(), TEXT(""));
@@ -189,6 +189,113 @@ STRING_TEST_CASE(String, HeapBoundaryJustAboveSSO) {
   CHECK_EQ(s.Size(), String::kSSOCapacity + 1);
 }
 
+STRING_TEST_CASE(String, InputItConstructor) {
+  for (const auto& test : kTestCases) {
+    std::basic_istringstream<CHAR> stream(test.text);
+
+    std::istreambuf_iterator<CHAR> first(stream);
+    std::istreambuf_iterator<CHAR> last;
+
+    String s(first, last);
+
+    CHECK_EQ(s.Size(), test.size);
+    CHECK_STR_EQ(s.CStr(), test.text);
+  }
+}
+
+#include <list>
+#include <vector>
+
+STRING_TEST_CASE(String, ForwardItConstructor) {
+  for (const auto& test : kTestCases) {
+    {
+      String s(test.text, test.text + test.size);
+      CHECK_EQ(s.Size(), test.size);
+      CHECK_STR_EQ(s.CStr(), test.text);
+    }
+    {
+      std::list<CHAR> l(test.text, test.text + test.size);
+      String s(l.begin(), l.end());
+      CHECK_EQ(s.Size(), test.size);
+      CHECK_STR_EQ(s.CStr(), test.text);
+    }
+    {
+      std::vector<CHAR> v(test.text, test.text + test.size);
+      String s(v.begin(), v.end());
+      CHECK_EQ(s.Size(), test.size);
+      CHECK_STR_EQ(s.CStr(), test.text);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, StringViewConstructor) {
+  for (const auto& test : kTestCases) {
+    {
+      std::basic_string<CHAR> s1(test.text);
+      String s(s1);
+      CHECK_EQ(s.Size(), test.size);
+      CHECK_STR_EQ(s.CStr(), test.text);
+    }
+    {
+      std::basic_string_view<CHAR> s1(test.text);
+      String s(s1);
+      CHECK_EQ(s.Size(), test.size);
+      CHECK_STR_EQ(s.CStr(), test.text);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, StringViewConstruct_Substr) {
+  struct SubstringTestCase {
+    const CHAR* text;
+    const SizeType pos;
+    const SizeType count;
+    const CHAR* expected;
+  };
+  static constexpr SubstringTestCase test_cases[]{
+      {TEXT(""), 0, 0, TEXT("")},
+      {TEXT(""), 0, kNpos, TEXT("")},
+      {TEXT("hello"), 0, 5, TEXT("hello")},
+      {TEXT("hello"), 0, 1, TEXT("h")},
+      {TEXT("hello"), 1, 2, TEXT("el")},
+      {TEXT("hello"), 4, 1, TEXT("o")},
+      {TEXT("hello"), 5, 0, TEXT("")},
+      {TEXT("hello world"), 0, 5, TEXT("hello")},
+      {TEXT("hello world"), 6, 5, TEXT("world")},
+      {TEXT("hello world"), 3, 4, TEXT("lo w")},
+      {TEXT("hello world"), 6, kNpos, TEXT("world")},
+      {TEXT("this is a very loooooooooooong string!"), 0, 4, TEXT("this")},
+      {TEXT("this is a very loooooooooooong string!"), 10, 4, TEXT("very")},
+      {TEXT("this is a very loooooooooooong string!"), 15, kNpos,
+       TEXT("loooooooooooong string!")},
+      {TEXT("this is a very loooooooooooong string!"), 0, kNpos,
+       TEXT("this is a very loooooooooooong string!")},
+      {TEXT("abcdef"), 2, 100, TEXT("cdef")},
+      {TEXT("abcdef"), 6, 0, TEXT("")},
+      {TEXT("abcdefghijklmnopqrstuvwxyz"), 0, 24,
+       TEXT("abcdefghijklmnopqrstuvwx")},
+      {TEXT("abcdefghijklmnopqrstuvwxyz"), 1, 23,
+       TEXT("bcdefghijklmnopqrstuvwx")},
+      {TEXT("abcdefghijklmnopqrstuvwxyz"), 1, 22,
+       TEXT("bcdefghijklmnopqrstuvw")},
+  };
+
+  for (const auto& test : test_cases) {
+    {
+      std::basic_string<CHAR> s1(test.text);
+      String s(s1, test.pos, test.count);
+      CHECK_EQ(s.Size(), CharTraits::length(test.expected));
+      CHECK_STR_EQ(s.CStr(), test.expected);
+    }
+    {
+      std::basic_string_view<CHAR> s1(test.text);
+      String s(s1, test.pos, test.count);
+      CHECK_EQ(s.Size(), CharTraits::length(test.expected));
+      CHECK_STR_EQ(s.CStr(), test.expected);
+    }
+  }
+}
+
 STRING_TEST_CASE(String, InitListConstructor) {
   struct InitListTestCase {
     InitListTestCase(std::initializer_list<CHAR> values,
@@ -239,6 +346,260 @@ STRING_TEST_CASE(String, InitListConstructor) {
   for (const auto& test : test_cases) {
     CHECK_EQ(test.s.Size(), test.size);
     CHECK_STR_EQ(test.s.CStr(), test.text);
+  }
+}
+
+STRING_TEST_CASE(String, OperatorStringView) {
+  for (const auto& test : kTestCases) {
+    String s(test.text);
+    CHECK_EQ(s.Size(), test.size);
+    CHECK_STR_EQ(s.CStr(), test.text);
+
+    std::basic_string_view<CHAR> view = s;
+    CHECK_EQ(view.size(), s.Size());
+    CHECK_STR_EQ(s.CStr(), s.Data());
+
+    if (!s.IsEmpty()) {
+      s[0] = TEXT('H');
+      CHECK_EQ(view.size(), s.Size());
+      CHECK_STR_EQ(s.CStr(), s.Data());
+    }
+  }
+}
+
+namespace {
+static constexpr CHAR kChars[]{
+    TEXT('a'), TEXT('B'), TEXT('3'), TEXT('#'), TEXT('x'), TEXT('Q'), TEXT('7'),
+    TEXT('@'), TEXT('m'), TEXT('Z'), TEXT('0'), TEXT('!'), TEXT('k'), TEXT('P'),
+    TEXT('9'), TEXT('$'), TEXT('v'), TEXT('N'), TEXT('2'), TEXT('&'),
+};
+
+static constexpr TestCase kAssignmentTestCases[]{
+    TestCase{TEXT(""), 0},
+    TestCase{TEXT("a"), 1},
+    TestCase{TEXT("aaa"), 3},
+    TestCase{TEXT("hello"), 5},
+    TestCase{TEXT("hello hello"), 11},
+    TestCase{TEXT("this is a long string!"), 22},
+    TestCase{TEXT("this is a loong string!"), 23},
+    TestCase{TEXT("this is a looong string!"), 24},
+    TestCase{TEXT("this is a loooong string!"), 25},
+    TestCase{TEXT("this is a looooong string!"), 26},
+    TestCase{TEXT("this is a loooooooooooong string!"), 33},
+    TestCase{TEXT("this is a very loooooooooooong string!"), 38},
+    TestCase{TEXT("hello"), 5},
+    TestCase{TEXT("aaa"), 3},
+    TestCase{TEXT(""), 0},
+    TestCase{TEXT("foo foo foo bar bar"), 19},
+    TestCase{
+        TEXT("this is a very looooooooooooooooooooooooooooooooooooooooooong "
+             "striiiiiiing!"),
+        75},
+    TestCase{TEXT("hello"), 5},
+    TestCase{TEXT("foo foo foo bar bar bar"), 23},
+    TestCase{TEXT(""), 0},
+};
+}  // namespace
+
+STRING_TEST_CASE(String, CopyAssignment) {
+  {
+    String a(TEXT("Hello"));
+    a = a;
+    CHECK_EQ(a.Size(), 5);
+    CHECK_STR_EQ(a.CStr(), TEXT("Hello"));
+  }
+  {
+    String a;
+    String b;
+    a = b;
+    CHECK_EQ(a.Size(), 0);
+    CHECK_EQ(b.Size(), 0);
+    CHECK_TRUE(a.IsEmpty());
+    CHECK_TRUE(b.IsEmpty());
+    CHECK_STR_EQ(a.CStr(), TEXT(""));
+    CHECK_STR_EQ(b.CStr(), TEXT(""));
+  }
+  {
+    String a1;
+    String a2;
+    for (const auto& test : kAssignmentTestCases) {
+      String b(test.text);
+
+      a1 = b;
+      a2.Assign(b);
+
+      CHECK_EQ(a1.Size(), test.size);
+      CHECK_EQ(a2.Size(), test.size);
+      CHECK_STR_EQ(a1.CStr(), test.text);
+      CHECK_STR_EQ(a2.CStr(), test.text);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, MoveAssignment) {
+  {
+    String a(TEXT("Hello"));
+    a = axio::Move(a);
+    CHECK_EQ(a.Size(), 5);
+    CHECK_STR_EQ(a.CStr(), TEXT("Hello"));
+  }
+  {
+    String a;
+    String b;
+    a = axio::Move(b);
+    CHECK_EQ(a.Size(), 0);
+    CHECK_EQ(b.Size(), 0);
+    CHECK_TRUE(a.IsEmpty());
+    CHECK_TRUE(b.IsEmpty());
+    CHECK_STR_EQ(a.CStr(), TEXT(""));
+    CHECK_STR_EQ(b.CStr(), TEXT(""));
+  }
+  {
+    String a1;
+    String a2;
+    for (const auto& test : kAssignmentTestCases) {
+      {
+        String b(test.text);
+        a1 = axio::Move(b);
+        CHECK_EQ(a1.Size(), test.size);
+        CHECK_STR_EQ(a1.CStr(), test.text);
+
+        if (axio::IsSpecializationOf<typename String::AllocatorType,
+                                     axio::Allocator>::value) {
+          CHECK_EQ(b.Size(), 0);
+          CHECK_TRUE(b.IsEmpty());
+          CHECK_STR_EQ(b.CStr(), TEXT(""));
+        }
+      }
+      {
+        String b(test.text);
+        a2.Assign(axio::Move(b));
+        CHECK_EQ(a2.Size(), test.size);
+        CHECK_STR_EQ(a2.CStr(), test.text);
+
+        if (axio::IsSpecializationOf<typename String::AllocatorType,
+                                     axio::Allocator>::value) {
+          CHECK_EQ(b.Size(), 0);
+          CHECK_TRUE(b.IsEmpty());
+          CHECK_STR_EQ(b.CStr(), TEXT(""));
+        }
+      }
+    }
+  }
+}
+
+STRING_TEST_CASE(String, InputItAssignment) {
+  String a;
+  for (const auto& test : kAssignmentTestCases) {
+    {
+      std::basic_istringstream<CHAR> stream(test.text);
+
+      std::istreambuf_iterator<CHAR> first(stream);
+      std::istreambuf_iterator<CHAR> last;
+
+      a.Assign(first, last);
+      CHECK_EQ(a.Size(), test.size);
+      CHECK_STR_EQ(a.CStr(), test.text);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, CountCharAssignment) {
+  struct CCATestCase {
+    CHAR value;
+    SizeType count;
+    const CHAR* expected;
+  };
+  static constexpr CCATestCase test_cases[]{
+      {TEXT('a'), 0, TEXT("")},
+      {TEXT('x'), 1, TEXT("x")},
+      {TEXT('a'), 2, TEXT("aa")},
+      {TEXT('b'), 3, TEXT("bbb")},
+      {TEXT('c'), 4, TEXT("cccc")},
+      {TEXT('d'), 7, TEXT("ddddddd")},
+      {TEXT('e'), 8, TEXT("eeeeeeee")},
+      {TEXT('f'), 15, TEXT("fffffffffffffff")},
+      {TEXT('g'), 16, TEXT("gggggggggggggggg")},
+      {TEXT('h'), 17, TEXT("hhhhhhhhhhhhhhhhh")},
+      {TEXT('i'), 31, TEXT("iiiiiiiiiiiiiiiiiiiiiiiiiiiiiii")},
+      {TEXT('j'), 32, TEXT("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj")},
+      {TEXT('k'), 33, TEXT("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")},
+      {TEXT('$'), 78,
+       TEXT("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
+            "$$$$$$$$$$$$")},
+      {TEXT(' '), 0, TEXT("")},
+      {TEXT('m'), 63,
+       TEXT("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+            "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm")},
+      {TEXT('n'), 64,
+       TEXT("nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+            "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn")},
+      {TEXT('0'), 10, TEXT("0000000000")},
+      {TEXT('#'), 5, TEXT("#####")},
+      {TEXT(' '), 6, TEXT("      ")},
+      {TEXT('['), 42, TEXT("[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[")},
+  };
+
+  String a;
+  for (const auto& test : test_cases) {
+    a.Assign(test.count, test.value);
+    CHECK_EQ(a.Size(), test.count);
+    CHECK_STR_EQ(a.CStr(), test.expected);
+  }
+}
+
+STRING_TEST_CASE(String, AssignOperator_Char) {
+  struct AOCTestCase {
+    const CHAR* original;
+    CHAR value;
+  };
+
+  static constexpr AOCTestCase test_cases[]{
+      AOCTestCase{TEXT(""), TEXT('A')},
+      AOCTestCase{TEXT("a"), TEXT('$')},
+      AOCTestCase{TEXT("aa"), TEXT('$')},
+      AOCTestCase{TEXT("aaa"), TEXT('$')},
+      AOCTestCase{TEXT("aaaa"), TEXT('$')},
+      AOCTestCase{TEXT("aaaaa"), TEXT('$')},
+      AOCTestCase{TEXT("aaaaaa"), TEXT('$')},
+      AOCTestCase{TEXT("aaaaaaa"), TEXT('$')},
+      AOCTestCase{TEXT("aaaaaaaa"), TEXT('$')},
+      AOCTestCase{TEXT("aaaaaaaaa"), TEXT('$')},
+      AOCTestCase{TEXT("hello world"), TEXT('x')},
+      AOCTestCase{TEXT("this is loong string!"), TEXT('x')},
+      AOCTestCase{TEXT("this is looong string!"), TEXT('y')},
+      AOCTestCase{TEXT("this is loooong string!"), TEXT('z')},
+      AOCTestCase{TEXT("this is looooong string!"), TEXT('^')},
+      AOCTestCase{TEXT("this is loooooong string!"), TEXT('@')},
+      AOCTestCase{TEXT("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), TEXT('5')},
+      AOCTestCase{TEXT("!!&^^%&*%^&!@#$!@#"), TEXT(' ')},
+      AOCTestCase{TEXT("                  "), TEXT(' ')},
+  };
+
+  SizeType n = 0;
+  for (const auto& test : test_cases) {
+    String s(test.original);
+
+    s = test.value;
+
+    CHECK_EQ(s.Size(), 1);
+    CHECK_EQ(s[0], test.value);
+
+    for (int i = 0; i < 5; ++i) {
+      const auto ch = kChars[n++ % AXIO_ARRAY_SIZE(kChars)];
+      s = ch;
+      CHECK_EQ(s.Size(), 1);
+      CHECK_EQ(s[0], ch);
+    }
+  }
+  {
+    String s;
+
+    s = TEXT('a');
+
+    CHECK_EQ(s.Size(), 1);
+    CHECK_EQ(s[0], TEXT('a'));
+    CHECK_STR_EQ(s.CStr(), TEXT("a"));
   }
 }
 
@@ -440,13 +801,6 @@ STRING_TEST_CASE(String, Reserve_Shrink) {
 STRING_TEST_CASE(String, Push) {
   IGNORE_RESULT();
 
-  static constexpr CHAR kChars[]{
-      TEXT('a'), TEXT('B'), TEXT('3'), TEXT('#'), TEXT('x'),
-      TEXT('Q'), TEXT('7'), TEXT('@'), TEXT('m'), TEXT('Z'),
-      TEXT('0'), TEXT('!'), TEXT('k'), TEXT('P'), TEXT('9'),
-      TEXT('$'), TEXT('v'), TEXT('N'), TEXT('2'), TEXT('&'),
-  };
-
   using string = std::basic_string<CHAR>;
   {
     string s1;
@@ -492,12 +846,6 @@ STRING_TEST_CASE(String, ElementAccess) {
       TestCase{TEXT("this is a loooooooooooong string!"), 33},
       TestCase{TEXT("this is a very loooooooooooong string!"), 38}};
 
-  static constexpr CHAR kChars[]{
-      TEXT('a'), TEXT('B'), TEXT('3'), TEXT('#'), TEXT('x'),
-      TEXT('Q'), TEXT('7'), TEXT('@'), TEXT('m'), TEXT('Z'),
-      TEXT('0'), TEXT('!'), TEXT('k'), TEXT('P'), TEXT('9'),
-      TEXT('$'), TEXT('v'), TEXT('N'), TEXT('2'), TEXT('&'),
-  };
   {
     SizeType idx = 0;
     for (const auto& test : test_cases) {
@@ -536,13 +884,6 @@ STRING_TEST_CASE(String, ElementAccess) {
 }
 
 STRING_TEST_CASE(String, Iterator) {
-  static constexpr CHAR kChars[]{
-      TEXT('a'), TEXT('B'), TEXT('3'), TEXT('#'), TEXT('x'),
-      TEXT('Q'), TEXT('7'), TEXT('@'), TEXT('m'), TEXT('Z'),
-      TEXT('0'), TEXT('!'), TEXT('k'), TEXT('P'), TEXT('9'),
-      TEXT('$'), TEXT('v'), TEXT('N'), TEXT('2'), TEXT('&'),
-  };
-
   {
     for (const auto& test : kTestCases) {
       String s(test.text);
