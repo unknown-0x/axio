@@ -1,6 +1,7 @@
 #ifndef AXIO_STRING_STRING_HPP_
 #define AXIO_STRING_STRING_HPP_
 
+#include <limits>
 #include <stdexcept>
 #include <string>
 

@@ -189,6 +189,8 @@ STRING_TEST_CASE(String, HeapBoundaryJustAboveSSO) {
   CHECK_EQ(s.Size(), String::kSSOCapacity + 1);
 }
 
+#include <sstream>
+
 STRING_TEST_CASE(String, InputItConstructor) {
   for (const auto& test : kTestCases) {
     std::basic_istringstream<CHAR> stream(test.text);
@@ -600,6 +602,62 @@ STRING_TEST_CASE(String, AssignOperator_Char) {
     CHECK_EQ(s.Size(), 1);
     CHECK_EQ(s[0], TEXT('a'));
     CHECK_STR_EQ(s.CStr(), TEXT("a"));
+  }
+}
+
+STRING_TEST_CASE(String, AssignCString) {
+  String a1;
+  String a2;
+  for (const auto& test : kAssignmentTestCases) {
+    {
+      a1 = test.text;
+      CHECK_EQ(a1.Size(), test.size);
+      CHECK_STR_EQ(a1.CStr(), test.text);
+    }
+    {
+      a2.Assign(test.text);
+      CHECK_EQ(a2.Size(), test.size);
+      CHECK_STR_EQ(a2.CStr(), test.text);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, Assign_StringViewLike) {
+  {
+    String a1;
+    String a2;
+    for (const auto& test : kAssignmentTestCases) {
+      std::basic_string<CHAR> s(test.text, test.size);
+      std::basic_string_view<CHAR> sv(test.text, test.size);
+      {
+        a1 = s;
+        CHECK_EQ(a1.Size(), test.size);
+        CHECK_STR_EQ(a1.CStr(), test.text);
+      }
+      {
+        a2 = sv;
+        CHECK_EQ(a2.Size(), test.size);
+        CHECK_STR_EQ(a2.CStr(), test.text);
+      }
+    }
+  }
+  {
+    String a1;
+    String a2;
+    for (const auto& test : kAssignmentTestCases) {
+      std::basic_string<CHAR> s(test.text, test.size);
+      std::basic_string_view<CHAR> sv(test.text, test.size);
+      {
+        a1.Assign(s);
+        CHECK_EQ(a1.Size(), test.size);
+        CHECK_STR_EQ(a1.CStr(), test.text);
+      }
+      {
+        a2.Assign(sv);
+        CHECK_EQ(a2.Size(), test.size);
+        CHECK_STR_EQ(a2.CStr(), test.text);
+      }
+    }
   }
 }
 
