@@ -590,6 +590,83 @@ class BasicString : private internal::AllocatorHolder<A> {
     return data[old_size];
   }
 
+  BasicString& Remove(SizeType index = 0, SizeType count = kNpos) {
+    const auto size = Size();
+    AXIO_ASSERT(index <= size);
+
+    if (index == size || count == 0) {
+      return *this;
+    }
+
+    Pointer data = Data();
+    SizeType new_size = 0;
+    if (count == kNpos || index + count >= size) {
+      new_size = index;
+    } else {
+      new_size = size - count;
+      auto dest = data + index;
+      TraitsType::copy(dest, dest + count, new_size - index);
+    }
+
+    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(new_size))
+            : SetHeapSize(new_size);
+    return *this;
+  }
+
+  Iterator Remove(ConstIterator pos) {
+    auto b = begin();
+    AXIO_ASSERT(pos >= b && pos < end());
+    const auto index = static_cast<SizeType>(pos - b);
+    Remove(index, 1);
+    return b + index;
+  }
+
+  Iterator Remove(ConstIterator first, ConstIterator last) {
+    auto b = begin();
+    AXIO_ASSERT(first >= b && first <= last && last <= end());
+    const auto index = static_cast<SizeType>(first - b);
+    const auto count = static_cast<SizeType>(last - first);
+    Remove(index, count);
+    return b + index;
+  }
+
+  void Pop() {
+    AXIO_ASSERT(!IsEmpty());
+    const auto new_size = Size() - 1;
+    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(new_size))
+            : SetHeapSize(new_size);
+  }
+
+  BasicString& Append(SizeType n, ValueType c);
+
+  BasicString& Append(ConstPointer s);
+
+  BasicString& Append(ConstPointer s, SizeType n);
+
+  BasicString& Append(std::initializer_list<ValueType> values);
+
+  BasicString& Append(const BasicString& other);
+
+  BasicString& Append(const BasicString& other,
+                      SizeType pos,
+                      SizeType count = kNpos);
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  BasicString& Append(const StringViewLike& sv);
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  BasicString& Append(const StringViewLike& sv,
+                      SizeType pos,
+                      SizeType count = kNpos);
+
+  template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
+  BasicString& Append(InputIt first, InputIt last);
+
+  template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
+  BasicString& Append(ForwardIt first, ForwardIt last);
+
  private:
   struct HeapStorage {
     Pointer data;

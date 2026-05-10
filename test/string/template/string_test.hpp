@@ -1072,3 +1072,206 @@ STRING_TEST_CASE(String, ReverseIterator) {
     }
   }
 }
+
+STRING_TEST_CASE(String, Pop) {
+  struct PopTestCase {
+    const CHAR* original;
+    const SizeType count;
+    const CHAR* expected;
+  };
+
+  static constexpr PopTestCase test_cases[]{
+      PopTestCase{TEXT(""), 0, TEXT("")},
+      PopTestCase{TEXT("abcdef"), 6, TEXT("")},
+      PopTestCase{TEXT("abcdef"), 3, TEXT("abc")},
+      PopTestCase{TEXT("this is loooong string!!!!!!!!!!!!!!!!!!"), 10,
+                  TEXT("this is loooong string!!!!!!!!")},
+      PopTestCase{TEXT("!#$!(()%&][[:;*+]])"), 10, TEXT("!#$!(()%&")},
+  };
+
+  for (const auto& test : test_cases) {
+    String s(test.original);
+    for (SizeType i = 0; i < test.count; ++i) {
+      s.Pop();
+    }
+    CHECK_EQ(s.Size(), CharTraits::length(test.expected));
+    CHECK_STR_EQ(s.CStr(), test.expected);
+  }
+}
+
+STRING_TEST_CASE(String, Remove_Index_Count) {
+  struct RICTestCase {
+    const CHAR* original;
+    const SizeType index;
+    const SizeType count;
+    const CHAR* expected;
+  };
+  static constexpr RICTestCase test_cases[]{
+      RICTestCase{TEXT(""), 0, 0, TEXT("")},
+      RICTestCase{TEXT(""), 0, String::kNpos, TEXT("")},
+      RICTestCase{TEXT("A"), 0, 0, TEXT("A")},
+      RICTestCase{TEXT("A"), 0, 1, TEXT("")},
+      RICTestCase{TEXT("A"), 0, 2, TEXT("")},
+      RICTestCase{TEXT("A"), 0, String::kNpos, TEXT("")},
+      RICTestCase{TEXT("ABCDE"), 0, 0, TEXT("ABCDE")},
+      RICTestCase{TEXT("ABCDE"), 0, 1, TEXT("BCDE")},
+      RICTestCase{TEXT("ABCDE"), 0, 2, TEXT("CDE")},
+      RICTestCase{TEXT("ABCDE"), 0, 4, TEXT("E")},
+      RICTestCase{TEXT("ABCDE"), 0, 5, TEXT("")},
+      RICTestCase{TEXT("ABCDE"), 0, 6, TEXT("")},
+      RICTestCase{TEXT("ABCDE"), 0, String::kNpos, TEXT("")},
+      RICTestCase{TEXT("ABCDE"), 1, 0, TEXT("ABCDE")},
+      RICTestCase{TEXT("ABCDE"), 1, 1, TEXT("ACDE")},
+      RICTestCase{TEXT("ABCDE"), 1, 2, TEXT("ADE")},
+      RICTestCase{TEXT("ABCDE"), 1, 3, TEXT("AE")},
+      RICTestCase{TEXT("ABCDE"), 1, 4, TEXT("A")},
+      RICTestCase{TEXT("ABCDE"), 1, 5, TEXT("A")},
+      RICTestCase{TEXT("ABCDE"), 1, String::kNpos, TEXT("A")},
+      RICTestCase{TEXT("ABCDE"), 2, 0, TEXT("ABCDE")},
+      RICTestCase{TEXT("ABCDE"), 2, 1, TEXT("ABDE")},
+      RICTestCase{TEXT("ABCDE"), 2, 2, TEXT("ABE")},
+      RICTestCase{TEXT("ABCDE"), 2, 3, TEXT("AB")},
+      RICTestCase{TEXT("ABCDE"), 2, 10, TEXT("AB")},
+      RICTestCase{TEXT("ABCDE"), 2, String::kNpos, TEXT("AB")},
+      RICTestCase{TEXT("ABCDE"), 4, 0, TEXT("ABCDE")},
+      RICTestCase{TEXT("ABCDE"), 4, 1, TEXT("ABCD")},
+      RICTestCase{TEXT("ABCDE"), 4, 2, TEXT("ABCD")},
+      RICTestCase{TEXT("ABCDE"), 4, String::kNpos, TEXT("ABCD")},
+      RICTestCase{TEXT("ABCDE"), 3, 2, TEXT("ABC")},
+      RICTestCase{TEXT("ABCDE"), 3, 3, TEXT("ABC")},
+      RICTestCase{TEXT("ABCDE"), 3, 10, TEXT("ABC")},
+      RICTestCase{TEXT("ABCDE"), 5, 0, TEXT("ABCDE")},
+      RICTestCase{TEXT("ABCDE"), 5, String::kNpos, TEXT("ABCDE")},
+      RICTestCase{TEXT("AAAAA"), 1, 3, TEXT("AA")},
+      RICTestCase{TEXT("AAAAA"), 0, 4, TEXT("A")},
+      RICTestCase{TEXT("AAAAA"), 2, 2, TEXT("AAA")},
+      RICTestCase{TEXT("A B C"), 1, 1, TEXT("AB C")},
+      RICTestCase{TEXT("A-B-C"), 1, 3, TEXT("AC")},
+      RICTestCase{TEXT("!!@@##"), 2, 2, TEXT("!!##")},
+      RICTestCase{TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 10,
+                  TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ")},
+      RICTestCase{TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 10, 10,
+                  TEXT("0123456789KLMNOPQRSTUVWXYZ")},
+      RICTestCase{TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 20, 100,
+                  TEXT("0123456789ABCDEFGHIJ")},
+      RICTestCase{TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 35, 1,
+                  TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXY")},
+      RICTestCase{TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 36, 0,
+                  TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")},
+      RICTestCase{TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0,
+                  String::kNpos, TEXT("")},
+  };
+
+  for (const auto& test : test_cases) {
+    String s(test.original);
+
+    s.Remove(test.index, test.count);
+
+    const auto size = CharTraits::length(test.expected);
+    CHECK_EQ(s.Size(), size);
+    CHECK_STR_EQ(s.CStr(), test.expected);
+  }
+}
+
+STRING_TEST_CASE(String, Remove_Pos) {
+  struct RITestCase {
+    const CHAR* original;
+    const SizeType index;
+    const CHAR* expected;
+  };
+  {
+    static constexpr RITestCase test_cases[]{
+        {TEXT("A"), 0, TEXT("")},
+        {TEXT("ABCDE"), 0, TEXT("BCDE")},
+        {TEXT("ABCDE"), 1, TEXT("ACDE")},
+        {TEXT("ABCDE"), 2, TEXT("ABDE")},
+        {TEXT("ABCDE"), 3, TEXT("ABCE")},
+        {TEXT("ABCDE"), 4, TEXT("ABCD")},
+        {TEXT("AAAAA"), 2, TEXT("AAAA")},
+        {TEXT("A B C"), 1, TEXT("AB C")},
+        {TEXT("A-B-C"), 1, TEXT("AB-C")},
+        {TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0,
+         TEXT("123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")},
+        {TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 10,
+         TEXT("0123456789BCDEFGHIJKLMNOPQRSTUVWXYZ")},
+        {TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 35,
+         TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXY")},
+    };
+
+    for (const auto& test : test_cases) {
+      String str(test.original);
+
+      const auto it = str.Remove(str.begin() + test.index);
+
+      CHECK_EQ(it, str.begin() + test.index);
+      CHECK_STR_EQ(str.CStr(), test.expected);
+    }
+  }
+
+  {
+    static constexpr RITestCase test_cases[]{
+        {TEXT("A"), 0, TEXT("")},
+        {TEXT("ABCDE"), 4, TEXT("ABCD")},
+        {TEXT("AAAAA"), 4, TEXT("AAAA")},
+        {TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 35,
+         TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXY")},
+    };
+
+    for (const auto& test : test_cases) {
+      String str(test.original);
+
+      const auto it = str.Remove(str.begin() + test.index);
+
+      CHECK_EQ(it, str.end());
+      CHECK_STR_EQ(str.CStr(), test.expected);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, Remove_Iterator_Range) {
+  struct RIRTestCase {
+    const CHAR* original;
+    const SizeType first;
+    const SizeType last;
+    const CHAR* expected;
+    const SizeType returned_index;
+    const bool returns_end;
+  };
+
+  static constexpr RIRTestCase test_cases[]{
+      {TEXT("ABCDE"), 0, 0, TEXT("ABCDE"), 0, false},
+      {TEXT("ABCDE"), 2, 2, TEXT("ABCDE"), 2, false},
+      {TEXT("ABCDE"), 5, 5, TEXT("ABCDE"), 5, true},
+      {TEXT("ABCDE"), 0, 1, TEXT("BCDE"), 0, false},
+      {TEXT("ABCDE"), 1, 2, TEXT("ACDE"), 1, false},
+      {TEXT("ABCDE"), 4, 5, TEXT("ABCD"), 4, true},
+      {TEXT("ABCDE"), 0, 2, TEXT("CDE"), 0, false},
+      {TEXT("ABCDE"), 0, 5, TEXT(""), 0, true},
+      {TEXT("ABCDE"), 1, 3, TEXT("ADE"), 1, false},
+      {TEXT("ABCDE"), 1, 4, TEXT("AE"), 1, false},
+      {TEXT("ABCDE"), 2, 4, TEXT("ABE"), 2, false},
+      {TEXT("ABCDE"), 2, 5, TEXT("AB"), 2, true},
+      {TEXT("ABCDE"), 3, 5, TEXT("ABC"), 3, true},
+      {TEXT("AAAAA"), 1, 4, TEXT("AA"), 1, false},
+      {TEXT("A B C"), 1, 4, TEXT("AC"), 1, false},
+      {TEXT("!!@@##"), 2, 4, TEXT("!!##"), 2, false},
+      {TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 10,
+       TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, false},
+      {TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 10, 20,
+       TEXT("0123456789KLMNOPQRSTUVWXYZ"), 10, false},
+      {TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 20, 36,
+       TEXT("0123456789ABCDEFGHIJ"), 20, true},
+      {TEXT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 36, TEXT(""), 0, true},
+  };
+
+  for (const auto& test : test_cases) {
+    String s(test.original);
+    const auto it = s.Remove(s.begin() + test.first, s.begin() + test.last);
+    CHECK_STR_EQ(s.CStr(), test.expected);
+    if (test.returns_end) {
+      CHECK_EQ(it, s.end());
+    } else {
+      CHECK_EQ(it, s.begin() + test.returned_index);
+    }
+  }
+}
