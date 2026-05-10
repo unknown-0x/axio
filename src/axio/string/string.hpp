@@ -141,16 +141,7 @@ class BasicString : private internal::AllocatorHolder<A> {
               const AllocatorType& allocator = AllocatorType())
       : AllocatorHolder(allocator) {
     const auto n = static_cast<SizeType>(std::distance(first, last));
-    Pointer data = InitWithSize(n);
-
-    if constexpr (IsContiguousIterator<
-                      typename Decay<ForwardIt>::type>::value) {
-      TraitsType::copy(data, first, n);
-    } else {
-      for (; first != last; ++first, ++data) {
-        TraitsType::assign(*data, *first);
-      }
-    }
+    Copy(InitWithSize(n), first, n);
   }
 
   template <typename StringViewLike,
@@ -400,21 +391,12 @@ class BasicString : private internal::AllocatorHolder<A> {
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   BasicString& Assign(ForwardIt first, ForwardIt last) {
     const auto n = static_cast<SizeType>(std::distance(first, last));
-
     if (n > Capacity()) {
       Release(this->GetAlloc());
       InitWithSize(n);
     }
 
-    Pointer data = Data();
-    if constexpr (IsContiguousIterator<
-                      typename Decay<ForwardIt>::type>::value) {
-      TraitsType::copy(data, first, n);
-    } else {
-      for (; first != last; ++first, ++data) {
-        TraitsType::assign(*data, *first);
-      }
-    }
+    Copy(Data(), first, n);
     IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(n)) : SetHeapSize(n);
     return *this;
   }
@@ -534,7 +516,7 @@ class BasicString : private internal::AllocatorHolder<A> {
     }
 
     if (n > Capacity()) {
-      Reallocate(n);
+      Reallocate<false>(n, old_size);
     }
 
     if (IsSSO()) {
@@ -549,13 +531,12 @@ class BasicString : private internal::AllocatorHolder<A> {
 
   void Reserve(SizeType new_capacity) {
     if (new_capacity > Capacity()) {
-      Reallocate(new_capacity);
+      Reallocate(new_capacity, Size());
     }
   }
 
   void Shrink() {
-    const SizeType size = Size();
-
+    const auto size = Size();
     const auto is_sso = IsSSO();
     if ((is_sso && size <= kSSOCapacity) || (!is_sso && size == Capacity())) {
       return;
@@ -570,24 +551,23 @@ class BasicString : private internal::AllocatorHolder<A> {
       return;
     }
 
-    Reallocate(size);
+    Reallocate(size, size);
   }
 
   Reference Push(ValueType c) {
-    const auto old_size = Size();
-    const auto new_size = old_size + 1;
-    const auto old_capacity = Capacity();
-    if (new_size > old_capacity) {
-      Reallocate(ComputeCapacity(old_capacity, 1));
+    auto size = Size();
+    const auto capacity = Capacity();
+    if (size == capacity) {
+      Reallocate<false>(ComputeCapacity(capacity, 1), size);
     }
 
     auto data = Data();
-    data[old_size] = c;
+    data[size++] = c;
 
-    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(new_size))
-            : SetHeapSize(new_size);
+    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(size))
+            : SetHeapSize(size);
 
-    return data[old_size];
+    return data[size - 1];
   }
 
   BasicString& Remove(SizeType index = 0, SizeType count = kNpos) {
@@ -637,35 +617,102 @@ class BasicString : private internal::AllocatorHolder<A> {
             : SetHeapSize(new_size);
   }
 
-  BasicString& Append(SizeType n, ValueType c);
+  BasicString& Append(SizeType n, ValueType c) {
+    const auto size = Size();
+    const auto capacity = Capacity();
+    if (n > capacity - size) {
+      Reallocate<false>(ComputeCapacity(capacity, n), size);
+    }
 
-  BasicString& Append(ConstPointer s);
+    TraitsType::assign(Data() + size, n, c);
+    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(size + n))
+            : SetHeapSize(size + n);
 
-  BasicString& Append(ConstPointer s, SizeType n);
+    return *this;
+  }
 
-  BasicString& Append(std::initializer_list<ValueType> values);
+  BasicString& Append(ConstPointer s, SizeType n) { return Append(s, s + n); }
 
-  BasicString& Append(const BasicString& other);
+  BasicString& Append(ConstPointer s) {
+    return Append(s, s + TraitsType::length(s));
+  }
+
+  BasicString& Append(std::initializer_list<ValueType> values) {
+    return Append(values.begin(), values.end());
+  }
+
+  BasicString& Append(const BasicString& other) {
+    const auto other_data = other.Data();
+    return Append(other_data, other_data + other.Size());
+  }
 
   BasicString& Append(const BasicString& other,
                       SizeType pos,
-                      SizeType count = kNpos);
+                      SizeType count = kNpos) {
+    const auto other_size = other.Size();
+    AXIO_ASSERT(pos <= other_size);
+    const auto append_count = (count == kNpos || pos + count > other_size)
+                                  ? (other_size - pos)
+                                  : count;
+    const auto data_pos = other.Data() + pos;
+    return Append(data_pos, data_pos + append_count);
+  }
 
   template <typename StringViewLike,
             EnableIfIsStringViewLike<StringViewLike, int> = 0>
-  BasicString& Append(const StringViewLike& sv);
+  BasicString& Append(const StringViewLike& sv) {
+    const StringViewType view(sv);
+    return Append(view.begin(), view.end());
+  }
 
   template <typename StringViewLike,
             EnableIfIsStringViewLike<StringViewLike, int> = 0>
   BasicString& Append(const StringViewLike& sv,
                       SizeType pos,
-                      SizeType count = kNpos);
+                      SizeType count = kNpos) {
+    const StringViewType view(sv);
+    const auto view_size = view.size();
+    AXIO_ASSERT(pos <= view_size);
+    const auto append_count =
+        (count == kNpos || pos + count > view_size) ? (view_size - pos) : count;
+    const auto data_pos = view.begin() + pos;
+    return Append(data_pos, data_pos + append_count);
+  }
 
   template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
-  BasicString& Append(InputIt first, InputIt last);
+  BasicString& Append(InputIt first, InputIt last) {
+    while (first != last) {
+      Push(*first++);
+    }
+    return *this;
+  }
 
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
-  BasicString& Append(ForwardIt first, ForwardIt last);
+  BasicString& Append(ForwardIt first, ForwardIt last) {
+    const auto n = static_cast<SizeType>(std::distance(first, last));
+    const auto size = Size();
+    const auto capacity = Capacity();
+    if (n > capacity - size) {
+      const auto new_capacity = ComputeCapacity(capacity, n);
+      auto& allocator = this->GetAlloc();
+      auto new_data = AllocatorTraits::allocate(allocator, new_capacity + 1);
+      auto old_data = Data();
+      TraitsType::copy(new_data, old_data, size);
+      Copy(new_data + size, first, n);
+      Release(allocator);
+
+      storage_.heap.data = new_data;
+      storage_.heap.capacity = new_capacity;
+      SetModeAsHeap();
+      SetHeapSize(size + n);
+    } else {
+      Copy(Data() + size, first, n);
+      IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(size + n))
+              : SetHeapSize(size + n);
+    }
+
+    return *this;
+  }
 
  private:
   struct HeapStorage {
@@ -743,16 +790,19 @@ class BasicString : private internal::AllocatorHolder<A> {
     return storage_.heap.data;
   }
 
-  void Reallocate(SizeType new_capacity) {
-    const auto size = Size();
+  template <Bool SET_HEAP_SIZE_NOW = true>
+  void Reallocate(const SizeType new_capacity, const SizeType old_size) {
     auto& allocator = this->GetAlloc();
     auto new_data = AllocatorTraits::allocate(allocator, new_capacity + 1);
-    TraitsType::copy(new_data, Data(), size);
+    TraitsType::copy(new_data, Data(), old_size);
     Release(allocator);
 
     storage_.heap.data = new_data;
     storage_.heap.capacity = new_capacity;
-    SetHeapSize(size);
+
+    if constexpr (SET_HEAP_SIZE_NOW) {
+      SetHeapSize(old_size);
+    }
     SetModeAsHeap();
   }
 
@@ -770,6 +820,19 @@ class BasicString : private internal::AllocatorHolder<A> {
     if (!IsSSO()) {
       AllocatorTraits::deallocate(allocator, storage_.heap.data,
                                   storage_.heap.capacity + 1);
+    }
+  }
+
+  template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
+  static void Copy(Pointer dst, ForwardIt first, SizeType n) {
+    if constexpr (IsContiguousIterator<
+                      typename Decay<ForwardIt>::type>::value) {
+      TraitsType::copy(dst, first, n);
+    } else {
+      const auto end = dst + n;
+      for (; dst != end; ++first, ++dst) {
+        TraitsType::assign(*dst, *first);
+      }
     }
   }
 };

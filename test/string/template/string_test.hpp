@@ -1275,3 +1275,351 @@ STRING_TEST_CASE(String, Remove_Iterator_Range) {
     }
   }
 }
+
+namespace {
+struct AppendTestCase {
+  const CHAR* text;
+  const CHAR* expected;
+};
+
+#if 0
+static constexpr AppendTestCase kAppendTestCases[]{
+    AppendTestCase{TEXT("AB"), TEXT("AB")},
+    AppendTestCase{TEXT(""), TEXT("AB")},
+    AppendTestCase{TEXT("CD"), TEXT("ABCD")},
+    AppendTestCase{TEXT(""), TEXT("ABCD")},
+    AppendTestCase{TEXT("EFG"), TEXT("ABCDEFG")},
+    AppendTestCase{TEXT(" "), TEXT("ABCDEFG ")},
+    AppendTestCase{TEXT("123"), TEXT("ABCDEFG 123")},
+    AppendTestCase{TEXT("!@#"), TEXT("ABCDEFG 123!@#")},
+    AppendTestCase{TEXT("aa"), TEXT("ABCDEFG 123!@#aa")},
+    AppendTestCase{TEXT("bb"), TEXT("ABCDEFG 123!@#aabb")},
+    AppendTestCase{TEXT("ccc"), TEXT("ABCDEFG 123!@#aabbccc")},
+    AppendTestCase{TEXT("\n"), TEXT("ABCDEFG 123!@#aabbccc\n")},
+    AppendTestCase{TEXT("\t"), TEXT("ABCDEFG 123!@#aabbccc\n\t")},
+    AppendTestCase{TEXT("LONG_LONG_LONG_TEXT"),
+                   TEXT("ABCDEFG 123!@#aabbccc\n\tLONG_LONG_LONG_TEXT")},
+    AppendTestCase{
+        TEXT("0123456789"),
+        TEXT("ABCDEFG 123!@#aabbccc\n\tLONG_LONG_LONG_TEXT0123456789")},
+    AppendTestCase{TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+                   TEXT("ABCDEFG 123!@#aabbccc\n\tLONG_LONG_LONG_TEXT0123456789"
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZ")},
+    AppendTestCase{
+        TEXT("abcdefghijklmnopqrstuvwxyz"),
+        TEXT("ABCDEFG 123!@#aabbccc\n\tLONG_LONG_LONG_TEXT0123456789"
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")},
+    AppendTestCase{
+        TEXT("___"),
+        TEXT("ABCDEFG 123!@#aabbccc\n\tLONG_LONG_LONG_TEXT0123456789"
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz___")},
+    AppendTestCase{
+        TEXT("END"),
+        TEXT("ABCDEFG 123!@#aabbccc\n\tLONG_LONG_LONG_TEXT0123456789"
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz___END")},
+};
+#else
+static constexpr AppendTestCase kAppendTestCases[]{
+    AppendTestCase{TEXT("AASDFASDFASDFASDFASDFASDB"),
+                   TEXT("AASDFASDFASDFASDFASDFASDB")},
+    AppendTestCase{TEXT(""), TEXT("AASDFASDFASDFASDFASDFASDB")},
+    AppendTestCase{TEXT("CD"), TEXT("AASDFASDFASDFASDFASDFASDBCD")},
+    AppendTestCase{TEXT(""), TEXT("AASDFASDFASDFASDFASDFASDBCD")},
+    AppendTestCase{TEXT("EFG"), TEXT("AASDFASDFASDFASDFASDFASDBCDEFG")},
+    AppendTestCase{TEXT(" "), TEXT("AASDFASDFASDFASDFASDFASDBCDEFG ")},
+    AppendTestCase{TEXT("123"), TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123")},
+    AppendTestCase{TEXT("!@#"), TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#")},
+    AppendTestCase{TEXT("aa"), TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aa")},
+    AppendTestCase{TEXT("bb"),
+                   TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aabb")},
+    AppendTestCase{TEXT("ccc"),
+                   TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aabbccc")},
+    AppendTestCase{TEXT("\n"),
+                   TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aabbccc\n")},
+    AppendTestCase{TEXT("\t"),
+                   TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aabbccc\n\t")},
+    AppendTestCase{TEXT("LONG_LONG_LONG_TEXT"),
+                   TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aabbccc\n\t"
+                        "LONG_LONG_LONG_TEXT")},
+    AppendTestCase{TEXT("0123456789"),
+                   TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aabbccc\n\t"
+                        "LONG_LONG_LONG_TEXT0123456789")},
+    AppendTestCase{TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+                   TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aabbccc\n\t"
+                        "LONG_LONG_LONG_TEXT0123456789"
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZ")},
+    AppendTestCase{
+        TEXT("abcdefghijklmnopqrstuvwxyz"),
+        TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aabbccc\n\t"
+             "LONG_LONG_LONG_TEXT0123456789"
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")},
+    AppendTestCase{
+        TEXT("___"),
+        TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aabbccc\n\t"
+             "LONG_LONG_LONG_TEXT0123456789"
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz___")},
+    AppendTestCase{
+        TEXT("END"),
+        TEXT("AASDFASDFASDFASDFASDFASDBCDEFG 123!@#aabbccc\n\t"
+             "LONG_LONG_LONG_TEXT0123456789"
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz___END")},
+};
+#endif
+}  // namespace
+
+STRING_TEST_CASE(String, Append) {
+  String s1;
+  String s2;
+  String s3;
+  String s4;
+  String s5;
+  for (const auto& test : kAppendTestCases) {
+    const auto text_size = CharTraits::length(test.text);
+    const auto expected_size = CharTraits::length(test.expected);
+    {
+      s1.Append(test.text, text_size);
+      CHECK_EQ(s1.Size(), expected_size);
+      CHECK_STR_EQ(s1.CStr(), test.expected);
+    }
+    {
+      s2.Append(test.text);
+      CHECK_EQ(s2.Size(), expected_size);
+      CHECK_STR_EQ(s2.CStr(), test.expected);
+    }
+    {
+      std::basic_string<CHAR> std_str(test.text, text_size);
+      s3.Append(std_str);
+      CHECK_EQ(s3.Size(), expected_size);
+      CHECK_STR_EQ(s3.CStr(), test.expected);
+    }
+    {
+      std::basic_string_view<CHAR> sv(test.text, text_size);
+      s4.Append(sv);
+      CHECK_EQ(s4.Size(), expected_size);
+      CHECK_STR_EQ(s4.CStr(), test.expected);
+    }
+    {
+      String other(test.text, text_size);
+      s5.Append(other);
+      CHECK_EQ(s5.Size(), expected_size);
+      CHECK_STR_EQ(s5.CStr(), test.expected);
+    }
+  }
+
+  {
+    String s;
+    s.Append({
+        TEXT('a'), TEXT('b'), TEXT('c'), TEXT('d'), TEXT('e'),
+        TEXT('f'), TEXT('g'), TEXT('h'), TEXT('i'), TEXT('j'),
+        TEXT('k'), TEXT('l'), TEXT('m'), TEXT('n'), TEXT('o'),
+        TEXT('p'), TEXT('q'), TEXT('r'), TEXT('s'), TEXT('t'),
+    });
+    CHECK_EQ(s.Size(), 20);
+    CHECK_STR_EQ(s.CStr(), TEXT("abcdefghijklmnopqrst"));
+    s.Append({
+        TEXT('1'),
+        TEXT('2'),
+        TEXT('3'),
+        TEXT('4'),
+        TEXT('5'),
+    });
+    CHECK_EQ(s.Size(), 25);
+    CHECK_STR_EQ(s.CStr(), TEXT("abcdefghijklmnopqrst12345"));
+  }
+}
+
+STRING_TEST_CASE(String, Append_Substr) {
+  struct AppendSubstrTestCase {
+    const CHAR* text;
+    const SizeType pos;
+    const SizeType count;
+    const CHAR* expected;
+  };
+
+#if 1
+  static constexpr AppendSubstrTestCase test_cases[]{
+      {TEXT("ABCDEFG"), 0, 2, TEXT("AB")},
+      {TEXT("ABCDEFG"), 2, 3, TEXT("ABCDE")},
+      {TEXT("ABCDEFG"), 5, 2, TEXT("ABCDEFG")},
+      {TEXT("ABCDEFG"), 7, 0, TEXT("ABCDEFG")},
+      {TEXT("ABCDEFG"), 0, String::kNpos, TEXT("ABCDEFGABCDEFG")},
+      {TEXT("ABCDEFG"), 2, String::kNpos, TEXT("ABCDEFGABCDEFGCDEFG")},
+      {TEXT("123456789"), 3, 3, TEXT("ABCDEFGABCDEFGCDEFG456")},
+      {TEXT("123456789"), 8, 1, TEXT("ABCDEFGABCDEFGCDEFG4569")},
+      {TEXT("123456789"), 8, 100, TEXT("ABCDEFGABCDEFGCDEFG45699")},
+      {TEXT("LONG_LONG_LONG_TEXT"), 5, 4, TEXT("ABCDEFGABCDEFGCDEFG45699LONG")},
+      {TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 10, 10,
+       TEXT("ABCDEFGABCDEFGCDEFG45699LONGKLMNOPQRST")},
+  };
+#else
+  static constexpr AppendSubstrTestCase test_cases[]{
+      {TEXT("AASDFASDFASDFASDFASDFASDB"), 0, 5, TEXT("AASDF")},
+      {TEXT("ABCDEFG"), 2, 3, TEXT("AASDFCDE")},
+      {TEXT("ABCDEFG"), 5, 2, TEXT("AASDFCDEFG")},
+      {TEXT("ABCDEFG"), 7, 0, TEXT("AASDFCDEFG")},
+      {TEXT("ABCDEFG"), 0, String::kNpos, TEXT("AASDFCDEFGABCDEFG")},
+      {TEXT("ABCDEFG"), 2, String::kNpos, TEXT("AASDFCDEFGABCDEFGCDEFG")},
+      {TEXT("123456789"), 3, 3, TEXT("AASDFCDEFGABCDEFGCDEFG456")},
+      {TEXT("123456789"), 8, 1, TEXT("AASDFCDEFGABCDEFGCDEFG4569")},
+      {TEXT("123456789"), 8, 100, TEXT("AASDFCDEFGABCDEFGCDEFG45699")},
+      {TEXT("LONG_LONG_LONG_TEXT"), 5, 4,
+       TEXT("AASDFCDEFGABCDEFGCDEFG45699LONG")},
+      {TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 10, 10,
+       TEXT("AASDFCDEFGABCDEFGCDEFG45699LONGKLMNOPQRST")},
+  };
+#endif
+
+  String s1;
+  String s2;
+  String s3;
+
+  for (const auto& test : test_cases) {
+    const auto text_size = CharTraits::length(test.text);
+    const auto expected_size = CharTraits::length(test.expected);
+    {
+      String other(test.text, text_size);
+      s1.Append(other, test.pos, test.count);
+      CHECK_EQ(s1.Size(), expected_size);
+      CHECK_STR_EQ(s1.CStr(), test.expected);
+    }
+    {
+      std::basic_string_view<CHAR> sv(test.text, text_size);
+      s2.Append(sv, test.pos, test.count);
+      CHECK_EQ(s2.Size(), expected_size);
+      CHECK_STR_EQ(s2.CStr(), test.expected);
+    }
+    {
+      std::basic_string<CHAR> std_str(test.text, text_size);
+      s3.Append(std_str, test.pos, test.count);
+      CHECK_EQ(s3.Size(), expected_size);
+      CHECK_STR_EQ(s3.CStr(), test.expected);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, Append_InputIt) {
+  String s1;
+  String s2;
+
+  for (const auto& test : kAppendTestCases) {
+    const auto text_size = CharTraits::length(test.text);
+    const auto expected_size = CharTraits::length(test.expected);
+
+    {
+      std::basic_istringstream<CHAR> iss(test.text);
+      iss >> std::noskipws;
+      s1.Append(std::istream_iterator<CHAR, CHAR>(iss),
+                std::istream_iterator<CHAR, CHAR>());
+
+      CHECK_EQ(s1.Size(), expected_size);
+      CHECK_STR_EQ(s1.CStr(), test.expected);
+    }
+
+    {
+      std::basic_string<CHAR> tmp(test.text, text_size);
+      std::basic_stringstream<CHAR> ss;
+      ss >> std::noskipws;
+      for (auto ch : tmp) {
+        ss << ch;
+      }
+      std::istream_iterator<CHAR, CHAR> first(ss);
+      std::istream_iterator<CHAR, CHAR> last;
+
+      s2.Append(first, last);
+
+      CHECK_EQ(s2.Size(), expected_size);
+      CHECK_STR_EQ(s2.CStr(), test.expected);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, Append_ForwardIt) {
+  String s1;
+  String s2;
+  String s3;
+
+  for (const auto& test : kAppendTestCases) {
+    const auto text_size = CharTraits::length(test.text);
+    const auto expected_size = CharTraits::length(test.expected);
+    {
+      String a(test.text, text_size);
+      s1.Append(a.begin(), a.end());
+      CHECK_EQ(s1.Size(), expected_size);
+      CHECK_STR_EQ(s1.CStr(), test.expected);
+    }
+    {
+      std::list<CHAR> l(test.text, test.text + text_size);
+      s2.Append(l.begin(), l.end());
+      CHECK_EQ(s2.Size(), expected_size);
+      CHECK_STR_EQ(s2.CStr(), test.expected);
+    }
+    {
+      std::vector<CHAR> v(test.text, test.text + text_size);
+      s3.Append(v.begin(), v.end());
+      CHECK_EQ(s3.Size(), expected_size);
+      CHECK_STR_EQ(s3.CStr(), test.expected);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, Append_Count_Char) {
+  struct ACCTestCase {
+    const SizeType count;
+    const CHAR ch;
+    const CHAR* expected;
+  };
+
+  static constexpr ACCTestCase test_cases[]{
+      ACCTestCase{0, TEXT('A'), TEXT("")},
+      ACCTestCase{0, TEXT('Z'), TEXT("")},
+      ACCTestCase{1, TEXT('A'), TEXT("A")},
+      ACCTestCase{1, TEXT('B'), TEXT("AB")},
+      ACCTestCase{2, TEXT('C'), TEXT("ABCC")},
+      ACCTestCase{3, TEXT('D'), TEXT("ABCCDDD")},
+      ACCTestCase{1, TEXT(' '), TEXT("ABCCDDD ")},
+      ACCTestCase{2, TEXT('!'), TEXT("ABCCDDD !!")},
+      ACCTestCase{1, TEXT('\n'), TEXT("ABCCDDD !!\n")},
+      ACCTestCase{1, TEXT('\t'), TEXT("ABCCDDD !!\n\t")},
+      ACCTestCase{5, TEXT('X'), TEXT("ABCCDDD !!\n\tXXXXX")},
+      ACCTestCase{1, TEXT('X'), TEXT("ABCCDDD !!\n\tXXXXXX")},
+      ACCTestCase{4, TEXT('Y'), TEXT("ABCCDDD !!\n\tXXXXXXYYYY")},
+      ACCTestCase{10, TEXT('0'), TEXT("ABCCDDD !!\n\tXXXXXXYYYY0000000000")},
+      ACCTestCase{26, TEXT('Z'),
+                  TEXT("ABCCDDD !!\n\tXXXXXXYYYY0000000000"
+                       "ZZZZZZZZZZZZZZZZZZZZZZZZZZ")},
+      ACCTestCase{64, TEXT('Q'),
+                  TEXT("ABCCDDD !!\n\tXXXXXXYYYY0000000000"
+                       "ZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+                       "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+                       "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ")},
+      ACCTestCase{3, TEXT('@'),
+                  TEXT("ABCCDDD !!\n\tXXXXXXYYYY0000000000"
+                       "ZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+                       "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+                       "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+                       "@@@")},
+      ACCTestCase{8, TEXT('#'),
+                  TEXT("ABCCDDD !!\n\tXXXXXXYYYY0000000000"
+                       "ZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+                       "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+                       "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+                       "@@@########")},
+      ACCTestCase{32, TEXT('W'),
+                  TEXT("ABCCDDD !!\n\tXXXXXXYYYY0000000000"
+                       "ZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+                       "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+                       "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+                       "@@@########"
+                       "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")},
+  };
+
+  String s;
+  SizeType expected_size = 0;
+
+  for (const auto& test : test_cases) {
+    s.Append(test.count, test.ch);
+    expected_size += test.count;
+    CHECK_EQ(s.Size(), expected_size);
+    CHECK_STR_EQ(s.CStr(), test.expected);
+  }
+}
