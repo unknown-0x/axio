@@ -1498,38 +1498,21 @@ STRING_TEST_CASE(String, Append_Substr) {
 }
 
 STRING_TEST_CASE(String, Append_InputIt) {
-  String s1;
-  String s2;
+  String s;
 
   for (const auto& test : kAppendTestCases) {
-    const auto text_size = CharTraits::length(test.text);
     const auto expected_size = CharTraits::length(test.expected);
 
-    {
-      std::basic_istringstream<CHAR> iss(test.text);
-      iss >> std::noskipws;
-      s1.Append(std::istream_iterator<CHAR, CHAR>(iss),
-                std::istream_iterator<CHAR, CHAR>());
+    std::basic_istringstream<CHAR> stream(test.text);
+    stream >> std::noskipws;
 
-      CHECK_EQ(s1.Size(), expected_size);
-      CHECK_STR_EQ(s1.CStr(), test.expected);
-    }
+    std::istreambuf_iterator<CHAR> first(stream);
+    std::istreambuf_iterator<CHAR> last;
 
-    {
-      std::basic_string<CHAR> tmp(test.text, text_size);
-      std::basic_stringstream<CHAR> ss;
-      ss >> std::noskipws;
-      for (auto ch : tmp) {
-        ss << ch;
-      }
-      std::istream_iterator<CHAR, CHAR> first(ss);
-      std::istream_iterator<CHAR, CHAR> last;
+    s.Append(first, last);
 
-      s2.Append(first, last);
-
-      CHECK_EQ(s2.Size(), expected_size);
-      CHECK_STR_EQ(s2.CStr(), test.expected);
-    }
+    CHECK_EQ(s.Size(), expected_size);
+    CHECK_STR_EQ(s.CStr(), test.expected);
   }
 }
 
