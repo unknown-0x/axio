@@ -68,6 +68,40 @@ static constexpr TestCase kTestCases[]{
     TestCase{TEXT("this is a looooong string!"), 26},
     TestCase{TEXT("this is a loooooooooooong string!"), 33},
     TestCase{TEXT("this is a very loooooooooooong string!"), 38}};
+
+struct SubstringTestCase {
+  const CHAR* text;
+  const SizeType pos;
+  const SizeType count;
+  const CHAR* expected;
+};
+
+static constexpr SubstringTestCase kSubstringTestCases[]{
+    {TEXT(""), 0, 0, TEXT("")},
+    {TEXT(""), 0, kNpos, TEXT("")},
+    {TEXT("hello"), 0, 5, TEXT("hello")},
+    {TEXT("hello"), 0, 1, TEXT("h")},
+    {TEXT("hello"), 1, 2, TEXT("el")},
+    {TEXT("hello"), 4, 1, TEXT("o")},
+    {TEXT("hello"), 5, 0, TEXT("")},
+    {TEXT("hello world"), 0, 5, TEXT("hello")},
+    {TEXT("hello world"), 6, 5, TEXT("world")},
+    {TEXT("hello world"), 3, 4, TEXT("lo w")},
+    {TEXT("hello world"), 6, kNpos, TEXT("world")},
+    {TEXT("this is a very loooooooooooong string!"), 0, 4, TEXT("this")},
+    {TEXT("this is a very loooooooooooong string!"), 10, 4, TEXT("very")},
+    {TEXT("this is a very loooooooooooong string!"), 15, kNpos,
+     TEXT("loooooooooooong string!")},
+    {TEXT("this is a very loooooooooooong string!"), 0, kNpos,
+     TEXT("this is a very loooooooooooong string!")},
+    {TEXT("abcdef"), 2, 100, TEXT("cdef")},
+    {TEXT("abcdef"), 6, 0, TEXT("")},
+    {TEXT("abcdefghijklmnopqrstuvwxyz"), 0, 24,
+     TEXT("abcdefghijklmnopqrstuvwx")},
+    {TEXT("abcdefghijklmnopqrstuvwxyz"), 1, 23,
+     TEXT("bcdefghijklmnopqrstuvwx")},
+    {TEXT("abcdefghijklmnopqrstuvwxyz"), 1, 22, TEXT("bcdefghijklmnopqrstuvw")},
+};
 }  // namespace
 
 STRING_TEST_CASE(String, Constructor_CString) {
@@ -123,41 +157,7 @@ STRING_TEST_CASE(String, MoveConstructor) {
 }
 
 STRING_TEST_CASE(String, SubstringConstructor) {
-  struct SubstringTestCase {
-    const CHAR* text;
-    const SizeType pos;
-    const SizeType count;
-    const CHAR* expected;
-  };
-  static constexpr SubstringTestCase test_cases[]{
-      {TEXT(""), 0, 0, TEXT("")},
-      {TEXT(""), 0, kNpos, TEXT("")},
-      {TEXT("hello"), 0, 5, TEXT("hello")},
-      {TEXT("hello"), 0, 1, TEXT("h")},
-      {TEXT("hello"), 1, 2, TEXT("el")},
-      {TEXT("hello"), 4, 1, TEXT("o")},
-      {TEXT("hello"), 5, 0, TEXT("")},
-      {TEXT("hello world"), 0, 5, TEXT("hello")},
-      {TEXT("hello world"), 6, 5, TEXT("world")},
-      {TEXT("hello world"), 3, 4, TEXT("lo w")},
-      {TEXT("hello world"), 6, kNpos, TEXT("world")},
-      {TEXT("this is a very loooooooooooong string!"), 0, 4, TEXT("this")},
-      {TEXT("this is a very loooooooooooong string!"), 10, 4, TEXT("very")},
-      {TEXT("this is a very loooooooooooong string!"), 15, kNpos,
-       TEXT("loooooooooooong string!")},
-      {TEXT("this is a very loooooooooooong string!"), 0, kNpos,
-       TEXT("this is a very loooooooooooong string!")},
-      {TEXT("abcdef"), 2, 100, TEXT("cdef")},
-      {TEXT("abcdef"), 6, 0, TEXT("")},
-      {TEXT("abcdefghijklmnopqrstuvwxyz"), 0, 24,
-       TEXT("abcdefghijklmnopqrstuvwx")},
-      {TEXT("abcdefghijklmnopqrstuvwxyz"), 1, 23,
-       TEXT("bcdefghijklmnopqrstuvwx")},
-      {TEXT("abcdefghijklmnopqrstuvwxyz"), 1, 22,
-       TEXT("bcdefghijklmnopqrstuvw")},
-  };
-
-  for (const auto& test : test_cases) {
+  for (const auto& test : kSubstringTestCases) {
     String original(test.text);
     String s(original, test.pos, test.count);
 
@@ -248,41 +248,7 @@ STRING_TEST_CASE(String, StringViewConstructor) {
 }
 
 STRING_TEST_CASE(String, StringViewConstruct_Substr) {
-  struct SubstringTestCase {
-    const CHAR* text;
-    const SizeType pos;
-    const SizeType count;
-    const CHAR* expected;
-  };
-  static constexpr SubstringTestCase test_cases[]{
-      {TEXT(""), 0, 0, TEXT("")},
-      {TEXT(""), 0, kNpos, TEXT("")},
-      {TEXT("hello"), 0, 5, TEXT("hello")},
-      {TEXT("hello"), 0, 1, TEXT("h")},
-      {TEXT("hello"), 1, 2, TEXT("el")},
-      {TEXT("hello"), 4, 1, TEXT("o")},
-      {TEXT("hello"), 5, 0, TEXT("")},
-      {TEXT("hello world"), 0, 5, TEXT("hello")},
-      {TEXT("hello world"), 6, 5, TEXT("world")},
-      {TEXT("hello world"), 3, 4, TEXT("lo w")},
-      {TEXT("hello world"), 6, kNpos, TEXT("world")},
-      {TEXT("this is a very loooooooooooong string!"), 0, 4, TEXT("this")},
-      {TEXT("this is a very loooooooooooong string!"), 10, 4, TEXT("very")},
-      {TEXT("this is a very loooooooooooong string!"), 15, kNpos,
-       TEXT("loooooooooooong string!")},
-      {TEXT("this is a very loooooooooooong string!"), 0, kNpos,
-       TEXT("this is a very loooooooooooong string!")},
-      {TEXT("abcdef"), 2, 100, TEXT("cdef")},
-      {TEXT("abcdef"), 6, 0, TEXT("")},
-      {TEXT("abcdefghijklmnopqrstuvwxyz"), 0, 24,
-       TEXT("abcdefghijklmnopqrstuvwx")},
-      {TEXT("abcdefghijklmnopqrstuvwxyz"), 1, 23,
-       TEXT("bcdefghijklmnopqrstuvwx")},
-      {TEXT("abcdefghijklmnopqrstuvwxyz"), 1, 22,
-       TEXT("bcdefghijklmnopqrstuvw")},
-  };
-
-  for (const auto& test : test_cases) {
+  for (const auto& test : kSubstringTestCases) {
     {
       std::basic_string<CHAR> s1(test.text);
       String s(s1, test.pos, test.count);
@@ -506,6 +472,30 @@ STRING_TEST_CASE(String, InputItAssignment) {
   }
 }
 
+STRING_TEST_CASE(String, ForwardItAssignment) {
+  String a;
+  for (const auto& test : kAssignmentTestCases) {
+    {
+      String s(test.text, test.text + test.size);
+      a.Assign(s.begin(), s.end());
+      CHECK_EQ(a.Size(), test.size);
+      CHECK_STR_EQ(a.CStr(), test.text);
+    }
+    {
+      std::list<CHAR> l(test.text, test.text + test.size);
+      a.Assign(l.begin(), l.end());
+      CHECK_EQ(a.Size(), test.size);
+      CHECK_STR_EQ(a.CStr(), test.text);
+    }
+    {
+      std::vector<CHAR> v(test.text, test.text + test.size);
+      a.Assign(v.begin(), v.end());
+      CHECK_EQ(a.Size(), test.size);
+      CHECK_STR_EQ(a.CStr(), test.text);
+    }
+  }
+}
+
 STRING_TEST_CASE(String, CountCharAssignment) {
   struct CCATestCase {
     CHAR value;
@@ -658,6 +648,105 @@ STRING_TEST_CASE(String, Assign_StringViewLike) {
         CHECK_STR_EQ(a2.CStr(), test.text);
       }
     }
+  }
+}
+
+STRING_TEST_CASE(String, Assign_Substr) {
+  {
+    String a1;
+    String a2;
+    String a3;
+
+    for (const auto& test : kSubstringTestCases) {
+      String ss(test.text);
+      std::basic_string<CHAR> s(test.text);
+      std::basic_string_view<CHAR> sv(test.text);
+
+      a1.Assign(s, test.pos, test.count);
+      a2.Assign(sv, test.pos, test.count);
+      a3.Assign(ss, test.pos, test.count);
+
+      const auto len = CharTraits::length(test.expected);
+
+      CHECK_EQ(a1.Size(), len);
+      CHECK_EQ(a2.Size(), len);
+      CHECK_EQ(a3.Size(), len);
+      CHECK_STR_EQ(a1.CStr(), test.expected);
+      CHECK_STR_EQ(a2.CStr(), test.expected);
+      CHECK_STR_EQ(a3.CStr(), test.expected);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, AssignInitList) {
+  {
+    String s(TEXT("hello"));
+
+    s.Assign({});
+
+    CHECK_TRUE(s.IsEmpty());
+    CHECK_EQ(s.Size(), 0);
+    CHECK_STR_EQ(s.CStr(), TEXT(""));
+
+    s.Assign({TEXT('a')});
+
+    CHECK_EQ(s.Size(), 1);
+    CHECK_STR_EQ(s.CStr(), TEXT("a"));
+
+    s.Assign({
+        TEXT('a'), TEXT('b'), TEXT('c'), TEXT('d'), TEXT('e'),
+        TEXT('f'), TEXT('g'), TEXT('h'), TEXT('i'), TEXT('j'),
+        TEXT('k'), TEXT('l'), TEXT('m'), TEXT('n'), TEXT('o'),
+        TEXT('p'), TEXT('q'), TEXT('r'), TEXT('s'), TEXT('t'),
+    });
+
+    CHECK_EQ(s.Size(), 20);
+    CHECK_STR_EQ(s.CStr(), TEXT("abcdefghijklmnopqrst"));
+
+    s.Assign({
+        TEXT('!'),
+        TEXT('@'),
+        TEXT('#'),
+        TEXT('$'),
+    });
+
+    CHECK_EQ(s.Size(), 4);
+    CHECK_STR_EQ(s.CStr(), TEXT("!@#$"));
+  }
+
+  {
+    String s(TEXT("hello"));
+
+    s = {};
+
+    CHECK_TRUE(s.IsEmpty());
+    CHECK_EQ(s.Size(), 0);
+    CHECK_STR_EQ(s.CStr(), TEXT(""));
+
+    s = {TEXT('a')};
+
+    CHECK_EQ(s.Size(), 1);
+    CHECK_STR_EQ(s.CStr(), TEXT("a"));
+
+    s = {
+        TEXT('a'), TEXT('b'), TEXT('c'), TEXT('d'), TEXT('e'),
+        TEXT('f'), TEXT('g'), TEXT('h'), TEXT('i'), TEXT('j'),
+        TEXT('k'), TEXT('l'), TEXT('m'), TEXT('n'), TEXT('o'),
+        TEXT('p'), TEXT('q'), TEXT('r'), TEXT('s'), TEXT('t'),
+    };
+
+    CHECK_EQ(s.Size(), 20);
+    CHECK_STR_EQ(s.CStr(), TEXT("abcdefghijklmnopqrst"));
+
+    s = {
+        TEXT('!'),
+        TEXT('@'),
+        TEXT('#'),
+        TEXT('$'),
+    };
+
+    CHECK_EQ(s.Size(), 4);
+    CHECK_STR_EQ(s.CStr(), TEXT("!@#$"));
   }
 }
 
