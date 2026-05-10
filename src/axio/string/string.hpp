@@ -415,7 +415,7 @@ class BasicString : private internal::AllocatorHolder<A> {
         TraitsType::assign(*data, *first);
       }
     }
-
+    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(n)) : SetHeapSize(n);
     return *this;
   }
 
