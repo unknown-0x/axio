@@ -544,7 +544,7 @@ class BasicString : private internal::AllocatorHolder<A> {
 
     if (size <= kSSOCapacity) {
       auto old_data = storage_.heap.data;
-      const auto old_capacity = storage_.heap.capacity;
+      const auto old_capacity = GetHeapCapacity();
       TraitsType::copy(storage_.sso.data, old_data, size);
       AllocatorTraits::deallocate(this->GetAlloc(), old_data, old_capacity + 1);
       SetModeAsSSO(static_cast<unsigned char>(size));
@@ -965,7 +965,7 @@ class BasicString : private internal::AllocatorHolder<A> {
   void Release(AllocatorType& allocator) {
     if (!IsSSO()) {
       AllocatorTraits::deallocate(allocator, storage_.heap.data,
-                                  storage_.heap.capacity + 1);
+                                  GetHeapCapacity() + 1);
     }
   }
 
