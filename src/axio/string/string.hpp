@@ -714,6 +714,153 @@ class BasicString : private internal::AllocatorHolder<A> {
     return *this;
   }
 
+  BasicString& Insert(SizeType index, SizeType count, ValueType value) {
+    Insert(begin() + index, count, value);
+    return *this;
+  }
+
+  BasicString& Insert(SizeType index, ConstPointer s) {
+    Insert(begin() + index, s, s + TraitsType::length(s));
+    return *this;
+  }
+
+  BasicString& Insert(SizeType index, ConstPointer s, SizeType count) {
+    Insert(begin() + index, s, s + count);
+    return *this;
+  }
+
+  BasicString& Insert(SizeType index, const BasicString& other) {
+    const auto other_data = other.Data();
+    Insert(begin() + index, other_data, other_data + other.Size());
+    return *this;
+  }
+
+  BasicString& Insert(SizeType index,
+                      const BasicString& str,
+                      SizeType pos,
+                      SizeType count = kNpos) {
+    const auto str_size = str.Size();
+    AXIO_ASSERT(pos <= str_size);
+    const auto insert_count =
+        (count == kNpos || pos + count > str_size) ? (str_size - pos) : count;
+    const auto data_pos = str.Data() + pos;
+    Insert(begin() + index, data_pos, data_pos + insert_count);
+    return *this;
+  }
+
+  template <typename StringViewLike>
+  BasicString& Insert(SizeType index, const StringViewLike& sv) {
+    const StringViewType view(sv);
+    Insert(begin() + index, view.begin(), view.end());
+    return *this;
+  }
+
+  template <typename StringViewLike>
+  BasicString& Insert(SizeType index,
+                      const StringViewLike& sv,
+                      SizeType pos,
+                      SizeType count = kNpos) {
+    const StringViewType view(sv);
+
+    const auto view_size = static_cast<SizeType>(view.size());
+    AXIO_ASSERT(pos <= view_size);
+    const auto insert_count =
+        (count == kNpos || pos + count > view_size) ? (view_size - pos) : count;
+    const auto data_pos = view.data() + pos;
+    Insert(begin() + index, data_pos, data_pos + insert_count);
+    return *this;
+  }
+
+  Iterator Insert(ConstIterator pos, ValueType value) {
+    auto b = begin();
+    AXIO_ASSERT(pos >= b && pos <= end());
+    const auto index = static_cast<SizeType>(pos - b);
+    const auto capacity = Capacity();
+    const auto size = Size();
+    if (size == capacity) {
+      Reallocate<false>(ComputeCapacity(capacity, 1), size);
+    }
+    auto dst = Data() + index;
+    TraitsType::move(dst + 1, dst, size - index);
+    TraitsType::assign(*dst, value);
+    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(size + 1))
+            : SetHeapSize(size + 1);
+    return dst;
+  }
+
+  Iterator Insert(ConstIterator pos, SizeType count, ValueType value) {
+    auto b = begin();
+    AXIO_ASSERT(pos >= b && pos <= end());
+    const auto index = static_cast<SizeType>(pos - b);
+    if (count == 0) {
+      return b + index;
+    }
+    const auto capacity = Capacity();
+    const auto size = Size();
+    if (count > capacity - size) {
+      Reallocate<false>(ComputeCapacity(capacity, count), size);
+    }
+    auto dst = Data() + index;
+    TraitsType::move(dst + count, dst, size - index);
+    TraitsType::assign(dst, count, value);
+    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(size + count))
+            : SetHeapSize(size + count);
+    return dst;
+  }
+
+  Iterator Insert(ConstIterator pos, std::initializer_list<ValueType> values) {
+    return Insert(pos, values.begin(), values.end());
+  }
+
+  template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
+  Iterator Insert(ConstIterator pos, InputIt first, InputIt last) {
+    const auto index = static_cast<SizeType>(pos - begin());
+    BasicString temp(first, last);
+    return Insert(begin() + index, temp.begin(), temp.end());
+  }
+
+  template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
+  Iterator Insert(ConstIterator pos, ForwardIt first, ForwardIt last) {
+    auto b = begin();
+    AXIO_ASSERT(pos >= b && pos <= end());
+
+    const auto index = static_cast<SizeType>(pos - b);
+    const auto n = static_cast<SizeType>(std::distance(first, last));
+
+    if (n == 0) {
+      return b + index;
+    }
+
+    const auto size = Size();
+    const auto capacity = Capacity();
+
+    if (n > capacity - size) {
+      const auto new_capacity = ComputeCapacity(capacity, n);
+      auto& allocator = this->GetAlloc();
+      auto new_data = AllocatorTraits::allocate(allocator, new_capacity + 1);
+      auto old_data = Data();
+
+      TraitsType::copy(new_data, old_data, index);
+      Copy(new_data + index, first, n);
+      TraitsType::copy(new_data + index + n, old_data + index, size - index);
+
+      Release(allocator);
+
+      storage_.heap.data = new_data;
+      storage_.heap.capacity = new_capacity;
+      SetModeAsHeap();
+      SetHeapSize(size + n);
+
+      return storage_.heap.data + index;
+    }
+    auto dst = Data() + index;
+    TraitsType::move(dst + n, dst, size - index);
+    Copy(dst, first, n);
+    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(size + n))
+            : SetHeapSize(size + n);
+    return dst;
+  }
+
  private:
   struct HeapStorage {
     Pointer data;

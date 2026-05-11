@@ -1428,6 +1428,27 @@ STRING_TEST_CASE(String, Append) {
   }
 }
 
+STRING_TEST_CASE(String, AppendSelf) {
+  String s;
+
+  s.Append(s);
+  CHECK_EQ(s.Size(), 0);
+  CHECK_STR_EQ(s.CStr(), TEXT(""));
+
+  s.Append(TEXT("ABCDEF")).Append(s);
+  CHECK_EQ(s.Size(), 12);
+  CHECK_STR_EQ(s.CStr(), TEXT("ABCDEFABCDEF"));
+
+  s.Append(s);
+  CHECK_EQ(s.Size(), 24);
+  CHECK_STR_EQ(s.CStr(), TEXT("ABCDEFABCDEFABCDEFABCDEF"));
+
+  s.Append(s);
+  CHECK_EQ(s.Size(), 48);
+  CHECK_STR_EQ(s.CStr(),
+               TEXT("ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF"));
+}
+
 STRING_TEST_CASE(String, Append_Substr) {
   struct AppendSubstrTestCase {
     const CHAR* text;
@@ -1604,5 +1625,271 @@ STRING_TEST_CASE(String, Append_Count_Char) {
     expected_size += test.count;
     CHECK_EQ(s.Size(), expected_size);
     CHECK_STR_EQ(s.CStr(), test.expected);
+  }
+}
+
+namespace {
+struct InsertTestCase {
+  const SizeType insert_pos;
+  const CHAR* insert_data;
+  const CHAR* expected;
+};
+
+#if 1
+static constexpr InsertTestCase kInsertTestCases[]{
+    InsertTestCase{0, TEXT(""), TEXT("")},
+    InsertTestCase{0, TEXT("A"), TEXT("A")},
+    InsertTestCase{1, TEXT("B"), TEXT("AB")},
+    InsertTestCase{1, TEXT("X"), TEXT("AXB")},
+    InsertTestCase{0, TEXT("!"), TEXT("!AXB")},
+    InsertTestCase{4, TEXT("?"), TEXT("!AXB?")},
+    InsertTestCase{2, TEXT("123"), TEXT("!A123XB?")},
+    InsertTestCase{0, TEXT("START"), TEXT("START!A123XB?")},
+    InsertTestCase{13, TEXT("END"), TEXT("START!A123XB?END")},
+    InsertTestCase{5, TEXT("---"), TEXT("START---!A123XB?END")},
+    InsertTestCase{8, TEXT("MID"), TEXT("START---MID!A123XB?END")},
+    InsertTestCase{22, TEXT(""), TEXT("START---MID!A123XB?END")},
+    InsertTestCase{0, TEXT("++"), TEXT("++START---MID!A123XB?END")},
+    InsertTestCase{24, TEXT("--"), TEXT("++START---MID!A123XB?END--")},
+    InsertTestCase{10, TEXT("INSERT"),
+                   TEXT("++START---INSERTMID!A123XB?END--")},
+    InsertTestCase{3, TEXT("Q"), TEXT("++SQTART---INSERTMID!A123XB?END--")},
+    InsertTestCase{33, TEXT("TAIL"),
+                   TEXT("++SQTART---INSERTMID!A123XB?END--TAIL")},
+    InsertTestCase{20, TEXT("CENTER"),
+                   TEXT("++SQTART---INSERTMIDCENTER!A123XB?END--TAIL")},
+};
+#else
+static constexpr InsertTestCase kInsertTestCases[]{
+    InsertTestCase{0, TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"),
+                   TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")},
+
+    InsertTestCase{0, TEXT("START-"),
+                   TEXT("START-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")},
+
+    InsertTestCase{42, TEXT("-END"),
+                   TEXT("START-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-END")},
+
+    InsertTestCase{
+        6, TEXT("INSERT-"),
+        TEXT("START-INSERT-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-END")},
+
+    InsertTestCase{
+        0, TEXT("+++"),
+        TEXT("+++START-INSERT-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-END")},
+
+    InsertTestCase{
+        56, TEXT("---"),
+        TEXT("+++START-INSERT-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-END---")},
+
+    InsertTestCase{
+        20, TEXT("MID"),
+        TEXT("+++START-INSERT-ABCDMIDEFGHIJKLMNOPQRSTUVWXYZ0123456789-END---")},
+
+    InsertTestCase{10, TEXT("1234567890"),
+                   TEXT("+++START-I1234567890NSERT-"
+                        "ABCDMIDEFGHIJKLMNOPQRSTUVWXYZ0123456789-END---")},
+
+    InsertTestCase{0, TEXT("LONG-LONG-LONG-"),
+                   TEXT("LONG-LONG-LONG-+++START-I1234567890NSERT-"
+                        "ABCDMIDEFGHIJKLMNOPQRSTUVWXYZ0123456789-END---")},
+
+    InsertTestCase{87, TEXT("-TAIL"),
+                   TEXT("LONG-LONG-LONG-+++START-I1234567890NSERT-"
+                        "ABCDMIDEFGHIJKLMNOPQRSTUVWXYZ0123456789-END----TAIL")},
+
+    InsertTestCase{50, TEXT("[CENTER]"),
+                   TEXT("LONG-LONG-LONG-+++START-I1234567890NSERT-ABCDMIDEF["
+                        "CENTER]GHIJKLMNOPQRSTUVWXYZ0123456789-END----TAIL")},
+};
+
+#endif
+}  // namespace
+
+STRING_TEST_CASE(String, Insert) {
+  String s1;
+  String s2;
+  String s3;
+  String s4;
+  String s5;
+  String s6;
+  SizeType expected_size = 0;
+
+  for (const auto& test : kInsertTestCases) {
+    const auto insert_len = CharTraits::length(test.insert_data);
+    expected_size += insert_len;
+    {
+      auto it = s1.Insert(s1.begin() + test.insert_pos, test.insert_data,
+                          test.insert_data + insert_len);
+      CHECK_EQ(it, s1.begin() + test.insert_pos);
+      CHECK_EQ(*it, test.insert_data[0]);
+      CHECK_EQ(s1.Size(), expected_size);
+      CHECK_STR_EQ(s1.CStr(), test.expected);
+    }
+    {
+      std::list<CHAR> l(test.insert_data, test.insert_data + insert_len);
+      auto it = s2.Insert(s2.begin() + test.insert_pos, l.begin(), l.end());
+      CHECK_EQ(it, s2.begin() + test.insert_pos);
+      CHECK_EQ(*it, test.insert_data[0]);
+      CHECK_EQ(s2.Size(), expected_size);
+      CHECK_STR_EQ(s2.CStr(), test.expected);
+    }
+    {
+      s3.Insert(test.insert_pos, test.insert_data);
+      CHECK_EQ(s3.Size(), expected_size);
+      CHECK_STR_EQ(s3.CStr(), test.expected);
+    }
+    {
+      s4.Insert(test.insert_pos, test.insert_data, insert_len);
+      CHECK_EQ(s4.Size(), expected_size);
+      CHECK_STR_EQ(s4.CStr(), test.expected);
+    }
+    {
+      String s(test.insert_data, insert_len);
+      s5.Insert(test.insert_pos, s);
+      CHECK_EQ(s5.Size(), expected_size);
+      CHECK_STR_EQ(s5.CStr(), test.expected);
+    }
+    {
+      std::basic_string_view<CHAR> sv(test.insert_data, insert_len);
+      s6.Insert(test.insert_pos, sv);
+      CHECK_EQ(s6.Size(), expected_size);
+      CHECK_STR_EQ(s6.CStr(), test.expected);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, InsertInputIt) {
+  String s;
+
+  for (const auto& test : kInsertTestCases) {
+    const auto expected_size = CharTraits::length(test.expected);
+
+    std::basic_istringstream<CHAR> stream(test.insert_data);
+    stream >> std::noskipws;
+
+    std::istreambuf_iterator<CHAR> first(stream);
+    std::istreambuf_iterator<CHAR> last;
+
+    auto it = s.Insert(s.begin() + test.insert_pos, first, last);
+
+    CHECK_EQ(it, s.begin() + test.insert_pos);
+    CHECK_EQ(*it, test.insert_data[0]);
+
+    CHECK_EQ(s.Size(), expected_size);
+    CHECK_STR_EQ(s.CStr(), test.expected);
+  }
+}
+
+STRING_TEST_CASE(String, Insert_Char) {
+  IGNORE_RESULT();
+
+  String s;
+
+  auto it = s.Insert(s.begin(), TEXT('S'));
+  CHECK_EQ(it, s.begin());
+  CHECK_EQ(*it, TEXT('S'));
+  CHECK_STR_EQ(s.CStr(), TEXT("S"));
+
+  const SizeType N = AXIO_ARRAY_SIZE(kChars);
+  for (int i = 0; i < 3; ++i) {
+    for (SizeType j = 0; j < N; ++j) {
+      const SizeType pos = j / 2;
+      it = s.Insert(s.begin() + pos, kChars[j % N]);
+      CHECK_EQ(it, s.begin() + pos);
+      CHECK_EQ(*it, kChars[j % N]);
+    }
+  }
+
+  CHECK_EQ(s.Size(), 61);
+  CHECK_STR_EQ(
+      s.CStr(),
+      TEXT("B#Q@Z!P$N&2v9k0m7x3aB#Q@Z!P$N&2v9k0m7x3aB#Q@Z!P$N&2v9k0m7x3aS"));
+}
+
+STRING_TEST_CASE(String, Insert_Count_Char) {
+  struct InsertTestCase {
+    const SizeType pos;
+    const SizeType count;
+    const CHAR value;
+    const CHAR* expected;
+  };
+
+  static constexpr InsertTestCase test_cases[]{
+      InsertTestCase{0, 0, TEXT('A'), TEXT("")},
+      InsertTestCase{0, 1, TEXT('S'), TEXT("S")},
+      InsertTestCase{0, 2, TEXT('a'), TEXT("aaS")},
+      InsertTestCase{1, 3, TEXT('B'), TEXT("aBBBaS")},
+      InsertTestCase{6, 2, TEXT('3'), TEXT("aBBBaS33")},
+      InsertTestCase{2, 4, TEXT('#'), TEXT("aB####BBaS33")},
+      InsertTestCase{0, 1, TEXT('x'), TEXT("xaB####BBaS33")},
+      InsertTestCase{13, 5, TEXT('Q'), TEXT("xaB####BBaS33QQQQQ")},
+      InsertTestCase{7, 3, TEXT('7'), TEXT("xaB####777BBaS33QQQQQ")},
+      InsertTestCase{10, 2, TEXT('@'), TEXT("xaB####777@@BBaS33QQQQQ")},
+      InsertTestCase{0, 6, TEXT('m'), TEXT("mmmmmmxaB####777@@BBaS33QQQQQ")},
+      InsertTestCase{29, 1, TEXT('Z'), TEXT("mmmmmmxaB####777@@BBaS33QQQQQZ")},
+      InsertTestCase{5, 8, TEXT('0'),
+                     TEXT("mmmmm00000000mxaB####777@@BBaS33QQQQQZ")},
+      InsertTestCase{20, 4, TEXT('!'),
+                     TEXT("mmmmm00000000mxaB###!!!!#777@@BBaS33QQQQQZ")},
+      InsertTestCase{0, 3, TEXT('k'),
+                     TEXT("kkkmmmmm00000000mxaB###!!!!#777@@BBaS33QQQQQZ")},
+      InsertTestCase{15, 2, TEXT('P'),
+                     TEXT("kkkmmmmm0000000PP0mxaB###!!!!#777@@BBaS33QQQQQZ")},
+  };
+
+  String s;
+  SizeType expected_size = 0;
+  for (const auto& test : test_cases) {
+    auto it = s.Insert(s.begin() + test.pos, test.count, test.value);
+    CHECK_EQ(it, s.begin() + test.pos);
+    expected_size += test.count;
+    CHECK_EQ(s.Size(), expected_size);
+    CHECK_STR_EQ(s.CStr(), test.expected);
+  }
+}
+
+STRING_TEST_CASE(String, Insert_Pos_Count) {
+  struct InsertTestCase {
+    const CHAR* initial;
+    const SizeType index;
+    const CHAR* insert_str;
+    const SizeType pos;
+    const SizeType count;
+    const CHAR* expected;
+  };
+
+  static constexpr InsertTestCase test_cases[]{
+      InsertTestCase{TEXT(""), 0, TEXT("ABC"), 0, 0, TEXT("")},
+      InsertTestCase{TEXT("HELLO"), 0, TEXT("ABC"), 0, 1, TEXT("AHELLO")},
+      InsertTestCase{TEXT("HELLO"), 5, TEXT("ABC"), 1, 2, TEXT("HELLOBC")},
+      InsertTestCase{TEXT("HELLO"), 2, TEXT("ABCDEFG"), 2, 3, TEXT("HECDELLO")},
+      InsertTestCase{TEXT("12345"), 3, TEXT("ABCDE"), 0, 5, TEXT("123ABCDE45")},
+      InsertTestCase{TEXT("STARTEND"), 5, TEXT("----"), 0, 4,
+                     TEXT("START----END")},
+      InsertTestCase{TEXT("ABCDE"), 1, TEXT("123456789"), 3, 2,
+                     TEXT("A45BCDE")},
+      InsertTestCase{TEXT("XYZ"), 0, TEXT("HELLO"), 1, 3, TEXT("ELLXYZ")},
+      InsertTestCase{TEXT("TAIL"), 4, TEXT("123456"), 2, kNpos,
+                     TEXT("TAIL3456")},
+      InsertTestCase{TEXT("MID"), 1, TEXT("ABCDEFG"), 4, 100, TEXT("MEFGID")},
+  };
+
+  for (const auto& test : test_cases) {
+    const auto expected_size = CharTraits::length(test.expected);
+    {
+      String s(test.initial);
+      String insert_str(test.insert_str);
+      s.Insert(test.index, insert_str, test.pos, test.count);
+      CHECK_STR_EQ(s.CStr(), test.expected);
+      CHECK_EQ(s.Size(), expected_size);
+    }
+    {
+      String s(test.initial);
+      std::basic_string_view<CHAR> insert_str(test.insert_str);
+      s.Insert(test.index, insert_str, test.pos, test.count);
+      CHECK_STR_EQ(s.CStr(), test.expected);
+      CHECK_EQ(s.Size(), expected_size);
+    }
   }
 }
