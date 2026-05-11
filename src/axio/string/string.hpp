@@ -702,7 +702,7 @@ class BasicString : private internal::AllocatorHolder<A> {
       Release(allocator);
 
       storage_.heap.data = new_data;
-      storage_.heap.capacity = new_capacity;
+      SetHeapCapacity(new_capacity);
       SetModeAsHeap();
       SetHeapSize(size + n);
     } else {
@@ -847,7 +847,7 @@ class BasicString : private internal::AllocatorHolder<A> {
       Release(allocator);
 
       storage_.heap.data = new_data;
-      storage_.heap.capacity = new_capacity;
+      SetHeapCapacity(new_capacity);
       SetModeAsHeap();
       SetHeapSize(size + n);
 
@@ -945,8 +945,7 @@ class BasicString : private internal::AllocatorHolder<A> {
     Release(allocator);
 
     storage_.heap.data = new_data;
-    storage_.heap.capacity = new_capacity;
-
+    SetHeapCapacity(new_capacity);
     if constexpr (SET_HEAP_SIZE_NOW) {
       SetHeapSize(old_size);
     }
