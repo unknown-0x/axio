@@ -701,10 +701,7 @@ class BasicString : private internal::AllocatorHolder<A> {
       Copy(new_data + size, first, n);
       Release(allocator);
 
-      storage_.heap.data = new_data;
-      SetHeapCapacity(new_capacity);
-      SetModeAsHeap();
-      SetHeapSize(size + n);
+      SetModeAsHeap(new_data, new_capacity, size + n);
     } else {
       Copy(Data() + size, first, n);
       IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(size + n))
@@ -748,14 +745,16 @@ class BasicString : private internal::AllocatorHolder<A> {
     return *this;
   }
 
-  template <typename StringViewLike>
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
   BasicString& Insert(SizeType index, const StringViewLike& sv) {
     const StringViewType view(sv);
     Insert(begin() + index, view.begin(), view.end());
     return *this;
   }
 
-  template <typename StringViewLike>
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
   BasicString& Insert(SizeType index,
                       const StringViewLike& sv,
                       SizeType pos,
@@ -846,10 +845,7 @@ class BasicString : private internal::AllocatorHolder<A> {
 
       Release(allocator);
 
-      storage_.heap.data = new_data;
-      SetHeapCapacity(new_capacity);
-      SetModeAsHeap();
-      SetHeapSize(size + n);
+      SetModeAsHeap(new_data, new_capacity, size + n);
 
       return storage_.heap.data + index;
     }
@@ -859,6 +855,421 @@ class BasicString : private internal::AllocatorHolder<A> {
     IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(size + n))
             : SetHeapSize(size + n);
     return dst;
+  }
+
+  int Compare(const BasicString& s) const {
+    return Compare(s.Data(), s.Size());
+  }
+
+  int Compare(SizeType pos1, SizeType count1, const BasicString& s) const {
+    return Compare(pos1, count1, s.Data(), s.Size());
+  }
+
+  int Compare(SizeType pos1,
+              SizeType count1,
+              const BasicString& s,
+              SizeType pos2,
+              SizeType count2 = kNpos) const {
+    const auto size2 = s.Size();
+    AXIO_ASSERT(pos2 <= size2);
+    const auto rhs_count =
+        (count2 == kNpos || pos2 + count2 > size2) ? (size2 - pos2) : count2;
+    return Compare(pos1, count1, s.Data() + pos2, rhs_count);
+  }
+
+  int Compare(ConstPointer s, SizeType count) const {
+    const auto size = Size();
+    const int result = TraitsType::compare(Data(), s, AXIO_MIN(size, count));
+    return result != 0 ? result : static_cast<int>(size - count);
+  }
+
+  int Compare(ConstPointer s) const {
+    return Compare(s, TraitsType::length(s));
+  }
+
+  int Compare(SizeType pos1, SizeType count1, ConstPointer s) const {
+    return Compare(pos1, count1, s, TraitsType::length(s));
+  }
+
+  int Compare(SizeType pos1,
+              SizeType count1,
+              ConstPointer s,
+              SizeType count2) const {
+    const auto size = Size();
+    AXIO_ASSERT(pos1 <= size);
+    const auto lhs_count =
+        (count1 == kNpos || pos1 + count1 > size) ? (size - pos1) : count1;
+    const int result =
+        TraitsType::compare(Data() + pos1, s, AXIO_MIN(lhs_count, count2));
+    return result != 0 ? result : static_cast<int>(lhs_count - count2);
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  int Compare(const StringViewLike& s) const {
+    const StringViewType view(s);
+    return Compare(view.data(), static_cast<SizeType>(view.size()));
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  int Compare(SizeType pos1, SizeType count1, const StringViewLike& s) const {
+    const StringViewType view(s);
+    return Compare(pos1, count1, view.data(),
+                   static_cast<SizeType>(view.size()));
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  int Compare(SizeType pos1,
+              SizeType count1,
+              const StringViewLike& s,
+              SizeType pos2,
+              SizeType count2 = kNpos) const {
+    const StringViewType view(s);
+    const auto view_size = static_cast<SizeType>(view.size());
+    AXIO_ASSERT(pos2 <= view_size);
+    const auto rhs_count = (count2 == kNpos || pos2 + count2 > view_size)
+                               ? (view_size - pos2)
+                               : count2;
+    return Compare(pos1, count1, view.data() + pos2, rhs_count);
+  }
+
+  BasicString Substr(SizeType pos = 0, SizeType count = kNpos) const {
+    const auto size = Size();
+    AXIO_ASSERT(pos <= size);
+    const auto substr_count =
+        (count == kNpos || pos + count > size) ? (size - pos) : count;
+    return BasicString(Data() + pos, substr_count);
+  }
+
+  Bool StartsWith(ValueType c) const noexcept {
+    return !IsEmpty() && TraitsType::eq(Data()[0], c);
+  }
+
+  Bool StartsWith(ConstPointer s) const {
+    const auto n = TraitsType::length(s);
+    return Size() >= n && TraitsType::compare(Data(), s, n) == 0;
+  }
+
+  Bool StartsWith(const BasicString& s) const {
+    const auto n = s.Size();
+    return Size() >= n && TraitsType::compare(Data(), s.Data(), n) == 0;
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  Bool StartsWith(const StringViewLike& s) const {
+    const StringViewType view(s);
+    const auto n = static_cast<SizeType>(view.size());
+    return Size() >= n && TraitsType::compare(Data(), view.data(), n) == 0;
+  }
+
+  Bool EndsWith(ValueType c) const noexcept {
+    const auto size = Size();
+    return size > 0 && TraitsType::eq(Data()[size - 1], c);
+  }
+
+  Bool EndsWith(ConstPointer s) const {
+    const auto n = TraitsType::length(s);
+    const auto size = Size();
+    return size >= n && TraitsType::compare(Data() + (size - n), s, n) == 0;
+  }
+
+  Bool EndsWith(const BasicString& s) const {
+    const auto n = s.Size();
+    const auto size = Size();
+    return size >= n &&
+           TraitsType::compare(Data() + (size - n), s.Data(), n) == 0;
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  Bool EndsWith(const StringViewLike& s) const {
+    const StringViewType view(s);
+    const auto n = static_cast<SizeType>(view.size());
+    const auto size = Size();
+    return size >= n &&
+           TraitsType::compare(Data() + (size - n), view.data(), n) == 0;
+  }
+
+  SizeType Find(const BasicString& str, SizeType pos = 0) const noexcept {
+    return Find(str.Data(), pos, str.Size());
+  }
+
+  SizeType Find(ConstPointer s, SizeType pos, SizeType count) const {
+    const auto size = Size();
+    if (count == 0) {
+      return pos;
+    }
+    if ((pos > size) || (count > size - pos)) {
+      return kNpos;
+    }
+
+    const auto data = Data();
+    const auto end = size - count;
+    for (SizeType i = pos; i <= end; ++i) {
+      if (TraitsType::compare(data + i, s, count) == 0) {
+        return i;
+      }
+    }
+
+    return kNpos;
+  }
+
+  SizeType Find(ConstPointer s, SizeType pos = 0) const {
+    return Find(s, pos, TraitsType::length(s));
+  }
+
+  SizeType Find(ValueType ch, SizeType pos = 0) const noexcept {
+    const auto size = Size();
+    if (pos >= size) {
+      return kNpos;
+    }
+    const auto result = TraitsType::find(Data() + pos, size - pos, ch);
+    return result ? static_cast<SizeType>(result - Data()) : kNpos;
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  SizeType Find(const StringViewLike& s, SizeType pos = 0) const
+      noexcept(noexcept(StringViewType(s))) {
+    const StringViewType view(s);
+    return Find(view.data(), pos, static_cast<SizeType>(view.size()));
+  }
+
+  SizeType RFind(const BasicString& str, SizeType pos = kNpos) const noexcept {
+    return RFind(str.Data(), pos, str.Size());
+  }
+
+  SizeType RFind(ConstPointer s, SizeType pos, SizeType count) const {
+    const auto size = Size();
+    if (count == 0) {
+      return AXIO_MIN(pos, size);
+    }
+    if (count > size) {
+      return kNpos;
+    }
+
+    const auto last = AXIO_MIN(pos, size - count);
+    const auto data = Data();
+    for (SizeType i = last + 1; i-- > 0;) {
+      if (TraitsType::compare(data + i, s, count) == 0) {
+        return i;
+      }
+    }
+    return kNpos;
+  }
+
+  SizeType RFind(ConstPointer s, SizeType pos = kNpos) const {
+    return RFind(s, pos, TraitsType::length(s));
+  }
+
+  SizeType RFind(ValueType ch, SizeType pos = kNpos) const noexcept {
+    const auto size = Size();
+    if (size == 0) {
+      return kNpos;
+    }
+
+    SizeType i = AXIO_MIN(pos, size - 1);
+    const auto data = Data();
+    do {
+      if (TraitsType::eq(data[i], ch)) {
+        return i;
+      }
+    } while (i-- != 0);
+    return kNpos;
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  SizeType RFind(const StringViewLike& s, SizeType pos = kNpos) const
+      noexcept(noexcept(StringViewType(s))) {
+    const StringViewType view(s);
+    return RFind(view.data(), pos, static_cast<SizeType>(view.size()));
+  }
+
+  SizeType FindFirstOf(const BasicString& str,
+                       SizeType pos = 0) const noexcept {
+    return FindFirstOf(str.Data(), pos, str.Size());
+  }
+
+  SizeType FindFirstOf(ConstPointer s, SizeType pos, SizeType count) const {
+    const auto size = Size();
+    if (pos >= size || count == 0) {
+      return kNpos;
+    }
+
+    const auto data = Data();
+    for (SizeType i = pos; i < size; ++i) {
+      if (TraitsType::find(s, count, data[i]) != nullptr) {
+        return i;
+      }
+    }
+    return kNpos;
+  }
+
+  SizeType FindFirstOf(ConstPointer s, SizeType pos = 0) const {
+    return FindFirstOf(s, pos, TraitsType::length(s));
+  }
+
+  SizeType FindFirstOf(ValueType ch, SizeType pos = 0) const noexcept {
+    return Find(ch, pos);
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  SizeType FindFirstOf(const StringViewLike& s, SizeType pos = 0) const
+      noexcept(noexcept(StringViewType(s))) {
+    const StringViewType view(s);
+    return FindFirstOf(view.data(), pos, static_cast<SizeType>(view.size()));
+  }
+
+  SizeType FindFirstNotOf(const BasicString& str,
+                          SizeType pos = 0) const noexcept {
+    return FindFirstNotOf(str.Data(), pos, str.Size());
+  }
+
+  SizeType FindFirstNotOf(ConstPointer s, SizeType pos, SizeType count) const {
+    const auto size = Size();
+    if (pos >= size) {
+      return kNpos;
+    }
+
+    const auto data = Data();
+    for (SizeType i = pos; i < size; ++i) {
+      if (TraitsType::find(s, count, data[i]) == nullptr) {
+        return i;
+      }
+    }
+    return kNpos;
+  }
+
+  SizeType FindFirstNotOf(ConstPointer s, SizeType pos = 0) const {
+    return FindFirstNotOf(s, pos, TraitsType::length(s));
+  }
+
+  SizeType FindFirstNotOf(ValueType ch, SizeType pos = 0) const noexcept {
+    const auto size = Size();
+    if (pos >= size) {
+      return kNpos;
+    }
+
+    const auto data = Data();
+    for (SizeType i = pos; i < size; ++i) {
+      if (!TraitsType::eq(data[i], ch)) {
+        return i;
+      }
+    }
+    return kNpos;
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  SizeType FindFirstNotOf(const StringViewLike& s, SizeType pos = 0) const
+      noexcept(noexcept(StringViewType(s))) {
+    const StringViewType view(s);
+    return FindFirstNotOf(view.data(), pos, static_cast<SizeType>(view.size()));
+  }
+
+  SizeType FindLastOf(const BasicString& str,
+                      SizeType pos = kNpos) const noexcept {
+    return FindLastOf(str.Data(), pos, str.Size());
+  }
+
+  SizeType FindLastOf(ConstPointer s, SizeType pos, SizeType count) const {
+    const auto size = Size();
+    if (size == 0 || count == 0) {
+      return kNpos;
+    }
+
+    SizeType i = AXIO_MIN(pos, size - 1);
+    const auto data = Data();
+    do {
+      if (TraitsType::find(s, count, data[i]) != nullptr) {
+        return i;
+      }
+    } while (i-- != 0);
+    return kNpos;
+  }
+
+  SizeType FindLastOf(ConstPointer s, SizeType pos = kNpos) const {
+    return FindLastOf(s, pos, TraitsType::length(s));
+  }
+
+  SizeType FindLastOf(ValueType ch, SizeType pos = kNpos) const noexcept {
+    return RFind(ch, pos);
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  SizeType FindLastOf(const StringViewLike& s, SizeType pos = kNpos) const
+      noexcept(noexcept(StringViewType(s))) {
+    const StringViewType view(s);
+    return FindLastOf(view.data(), pos, static_cast<SizeType>(view.size()));
+  }
+
+  SizeType FindLastNotOf(const BasicString& str,
+                         SizeType pos = kNpos) const noexcept {
+    return FindLastNotOf(str.Data(), pos, str.Size());
+  }
+
+  SizeType FindLastNotOf(ConstPointer s, SizeType pos, SizeType count) const {
+    const auto size = Size();
+    if (size == 0) {
+      return kNpos;
+    }
+
+    SizeType i = AXIO_MIN(pos, size - 1);
+    const auto data = Data();
+    do {
+      if (TraitsType::find(s, count, data[i]) == nullptr) {
+        return i;
+      }
+    } while (i-- != 0);
+    return kNpos;
+  }
+
+  SizeType FindLastNotOf(ConstPointer s, SizeType pos = kNpos) const {
+    return FindLastNotOf(s, pos, TraitsType::length(s));
+  }
+
+  SizeType FindLastNotOf(ValueType ch, SizeType pos = kNpos) const noexcept {
+    const auto size = Size();
+    if (size == 0) {
+      return kNpos;
+    }
+
+    SizeType i = AXIO_MIN(pos, size - 1);
+    const auto data = Data();
+    do {
+      if (!TraitsType::eq(data[i], ch)) {
+        return i;
+      }
+    } while (i-- != 0);
+    return kNpos;
+  }
+
+  template <typename StringViewLike,
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
+  SizeType FindLastNotOf(const StringViewLike& s, SizeType pos = kNpos) const
+      noexcept(noexcept(StringViewType(s))) {
+    const StringViewType view(s);
+    return FindLastNotOf(view.data(), pos, static_cast<SizeType>(view.size()));
+  }
+
+  Bool Contains(ValueType c) const noexcept { return Find(c) != kNpos; }
+
+  Bool Contains(ConstPointer s) const { return Find(s) != kNpos; }
+
+  Bool Contains(const BasicString& s) const { return Find(s) != kNpos; }
+
+  template <typename StringViewLike,
+            typename BasicString<T, Traits, A>::
+                template EnableIfIsStringViewLike<StringViewLike, int>>
+  Bool Contains(const StringViewLike& s) const {
+    const StringViewType view(s);
+    return Find(view.data(), 0, static_cast<SizeType>(view.size())) != kNpos;
   }
 
  private:
@@ -908,7 +1319,18 @@ class BasicString : private internal::AllocatorHolder<A> {
         static_cast<unsigned char>(kSSOCapacity - len);
   }
 
-  void SetModeAsHeap() { storage_.raw[kModeByteOffset] |= kHeapMask; }
+  void SetModeAsHeap(Pointer data, SizeType capacity, SizeType size) {
+    storage_.raw[kModeByteOffset] |= kHeapMask;
+    storage_.heap.data = data;
+    SetHeapCapacity(capacity);
+    SetHeapSize(size);
+  }
+
+  void SetModeAsHeap(Pointer data, SizeType capacity) {
+    storage_.raw[kModeByteOffset] |= kHeapMask;
+    storage_.heap.data = data;
+    SetHeapCapacity(capacity);
+  }
 
   void SetHeapCapacity(SizeType n) {
     storage_.heap.capacity =
@@ -929,11 +1351,7 @@ class BasicString : private internal::AllocatorHolder<A> {
       SetModeAsSSO(static_cast<unsigned char>(n));
       return storage_.sso.data;
     }
-
-    SetModeAsHeap();
-    storage_.heap.data = AllocatorTraits::allocate(this->GetAlloc(), n + 1);
-    SetHeapCapacity(n);
-    SetHeapSize(n);
+    SetModeAsHeap(AllocatorTraits::allocate(this->GetAlloc(), n + 1), n, n);
     return storage_.heap.data;
   }
 
@@ -944,12 +1362,10 @@ class BasicString : private internal::AllocatorHolder<A> {
     TraitsType::copy(new_data, Data(), old_size);
     Release(allocator);
 
-    storage_.heap.data = new_data;
-    SetHeapCapacity(new_capacity);
+    SetModeAsHeap(new_data, new_capacity);
     if constexpr (SET_HEAP_SIZE_NOW) {
       SetHeapSize(old_size);
     }
-    SetModeAsHeap();
   }
 
   SizeType ComputeCapacity(SizeType old_capacity, SizeType add_size) {
@@ -983,73 +1399,108 @@ class BasicString : private internal::AllocatorHolder<A> {
   }
 };
 
-// ========================================================= //
+template <typename T, typename Traits, typename A>
+inline Bool operator==(const BasicString<T, Traits, A>& lhs,
+                       const BasicString<T, Traits, A>& rhs) {
+  return lhs.Size() == rhs.Size() &&
+         Traits::compare(lhs.Data(), rhs.Data(), lhs.Size()) == 0;
+}
 
 template <typename T, typename Traits, typename A>
-Bool operator==(const BasicString<T, Traits, A>& lhs,
-                const BasicString<T, Traits, A>& rhs);
+inline Bool operator!=(const BasicString<T, Traits, A>& lhs,
+                       const BasicString<T, Traits, A>& rhs) {
+  return !(lhs == rhs);
+}
 
 template <typename T, typename Traits, typename A>
-Bool operator!=(const BasicString<T, Traits, A>& lhs,
-                const BasicString<T, Traits, A>& rhs);
+inline Bool operator>=(const BasicString<T, Traits, A>& lhs,
+                       const BasicString<T, Traits, A>& rhs) {
+  return lhs.Compare(rhs) >= 0;
+}
 
 template <typename T, typename Traits, typename A>
-Bool operator>=(const BasicString<T, Traits, A>& lhs,
-                const BasicString<T, Traits, A>& rhs);
+inline Bool operator<=(const BasicString<T, Traits, A>& lhs,
+                       const BasicString<T, Traits, A>& rhs) {
+  return lhs.Compare(rhs) <= 0;
+}
 
 template <typename T, typename Traits, typename A>
-Bool operator<=(const BasicString<T, Traits, A>& lhs,
-                const BasicString<T, Traits, A>& rhs);
+inline Bool operator>(const BasicString<T, Traits, A>& lhs,
+                      const BasicString<T, Traits, A>& rhs) {
+  return lhs.Compare(rhs) > 0;
+}
 
 template <typename T, typename Traits, typename A>
-Bool operator>(const BasicString<T, Traits, A>& lhs,
-               const BasicString<T, Traits, A>& rhs);
-
-template <typename T, typename Traits, typename A>
-Bool operator<(const BasicString<T, Traits, A>& lhs,
-               const BasicString<T, Traits, A>& rhs);
-
-// ========================================================= //
-
-template <typename T, typename Traits, typename A>
-Bool operator==(const BasicString<T, Traits, A>& lhs, const T* rhs);
-
-template <typename T, typename Traits, typename A>
-Bool operator!=(const BasicString<T, Traits, A>& lhs, const T* rhs);
-
-template <typename T, typename Traits, typename A>
-Bool operator>=(const BasicString<T, Traits, A>& lhs, const T* rhs);
-
-template <typename T, typename Traits, typename A>
-Bool operator<=(const BasicString<T, Traits, A>& lhs, const T* rhs);
-
-template <typename T, typename Traits, typename A>
-Bool operator>(const BasicString<T, Traits, A>& lhs, const T* rhs);
-
-template <typename T, typename Traits, typename A>
-Bool operator<(const BasicString<T, Traits, A>& lhs, const T* rhs);
+inline Bool operator<(const BasicString<T, Traits, A>& lhs,
+                      const BasicString<T, Traits, A>& rhs) {
+  return lhs.Compare(rhs) < 0;
+}
 
 // ========================================================= //
 
 template <typename T, typename Traits, typename A>
-Bool operator==(const T* lhs, const BasicString<T, Traits, A>& rhs);
+inline Bool operator==(const BasicString<T, Traits, A>& lhs, const T* rhs) {
+  const auto rhs_size = Traits::length(rhs);
+  return lhs.Size() == rhs_size &&
+         Traits::compare(lhs.Data(), rhs, rhs_size) == 0;
+}
 
 template <typename T, typename Traits, typename A>
-Bool operator!=(const T* lhs, const BasicString<T, Traits, A>& rhs);
+inline Bool operator!=(const BasicString<T, Traits, A>& lhs, const T* rhs) {
+  return !(lhs == rhs);
+}
 
 template <typename T, typename Traits, typename A>
-Bool operator>=(const T* lhs, const BasicString<T, Traits, A>& rhs);
+inline Bool operator>=(const BasicString<T, Traits, A>& lhs, const T* rhs) {
+  return lhs.Compare(rhs) >= 0;
+}
 
 template <typename T, typename Traits, typename A>
-Bool operator<=(const T* lhs, const BasicString<T, Traits, A>& rhs);
+inline Bool operator<=(const BasicString<T, Traits, A>& lhs, const T* rhs) {
+  return lhs.Compare(rhs) <= 0;
+}
 
 template <typename T, typename Traits, typename A>
-Bool operator>(const T* lhs, const BasicString<T, Traits, A>& rhs);
+inline Bool operator>(const BasicString<T, Traits, A>& lhs, const T* rhs) {
+  return lhs.Compare(rhs) > 0;
+}
 
 template <typename T, typename Traits, typename A>
-Bool operator<(const T* lhs, const BasicString<T, Traits, A>& rhs);
+inline Bool operator<(const BasicString<T, Traits, A>& lhs, const T* rhs) {
+  return lhs.Compare(rhs) < 0;
+}
 
 // ========================================================= //
+
+template <typename T, typename Traits, typename A>
+inline Bool operator==(const T* lhs, const BasicString<T, Traits, A>& rhs) {
+  return rhs == lhs;
+}
+
+template <typename T, typename Traits, typename A>
+inline Bool operator!=(const T* lhs, const BasicString<T, Traits, A>& rhs) {
+  return !(lhs == rhs);
+}
+
+template <typename T, typename Traits, typename A>
+inline Bool operator>=(const T* lhs, const BasicString<T, Traits, A>& rhs) {
+  return rhs.Compare(lhs) <= 0;
+}
+
+template <typename T, typename Traits, typename A>
+inline Bool operator<=(const T* lhs, const BasicString<T, Traits, A>& rhs) {
+  return rhs.Compare(lhs) >= 0;
+}
+
+template <typename T, typename Traits, typename A>
+inline Bool operator>(const T* lhs, const BasicString<T, Traits, A>& rhs) {
+  return rhs.Compare(lhs) < 0;
+}
+
+template <typename T, typename Traits, typename A>
+inline Bool operator<(const T* lhs, const BasicString<T, Traits, A>& rhs) {
+  return rhs.Compare(lhs) > 0;
+}
 
 using String = BasicString<char>;
 using WString = BasicString<wchar_t>;

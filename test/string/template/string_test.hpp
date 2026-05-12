@@ -1808,34 +1808,34 @@ STRING_TEST_CASE(String, Insert_Char) {
 }
 
 STRING_TEST_CASE(String, Insert_Count_Char) {
-  struct InsertTestCase {
+  struct ICCTestCase {
     const SizeType pos;
     const SizeType count;
     const CHAR value;
     const CHAR* expected;
   };
 
-  static constexpr InsertTestCase test_cases[]{
-      InsertTestCase{0, 0, TEXT('A'), TEXT("")},
-      InsertTestCase{0, 1, TEXT('S'), TEXT("S")},
-      InsertTestCase{0, 2, TEXT('a'), TEXT("aaS")},
-      InsertTestCase{1, 3, TEXT('B'), TEXT("aBBBaS")},
-      InsertTestCase{6, 2, TEXT('3'), TEXT("aBBBaS33")},
-      InsertTestCase{2, 4, TEXT('#'), TEXT("aB####BBaS33")},
-      InsertTestCase{0, 1, TEXT('x'), TEXT("xaB####BBaS33")},
-      InsertTestCase{13, 5, TEXT('Q'), TEXT("xaB####BBaS33QQQQQ")},
-      InsertTestCase{7, 3, TEXT('7'), TEXT("xaB####777BBaS33QQQQQ")},
-      InsertTestCase{10, 2, TEXT('@'), TEXT("xaB####777@@BBaS33QQQQQ")},
-      InsertTestCase{0, 6, TEXT('m'), TEXT("mmmmmmxaB####777@@BBaS33QQQQQ")},
-      InsertTestCase{29, 1, TEXT('Z'), TEXT("mmmmmmxaB####777@@BBaS33QQQQQZ")},
-      InsertTestCase{5, 8, TEXT('0'),
-                     TEXT("mmmmm00000000mxaB####777@@BBaS33QQQQQZ")},
-      InsertTestCase{20, 4, TEXT('!'),
-                     TEXT("mmmmm00000000mxaB###!!!!#777@@BBaS33QQQQQZ")},
-      InsertTestCase{0, 3, TEXT('k'),
-                     TEXT("kkkmmmmm00000000mxaB###!!!!#777@@BBaS33QQQQQZ")},
-      InsertTestCase{15, 2, TEXT('P'),
-                     TEXT("kkkmmmmm0000000PP0mxaB###!!!!#777@@BBaS33QQQQQZ")},
+  static constexpr ICCTestCase test_cases[]{
+      ICCTestCase{0, 0, TEXT('A'), TEXT("")},
+      ICCTestCase{0, 1, TEXT('S'), TEXT("S")},
+      ICCTestCase{0, 2, TEXT('a'), TEXT("aaS")},
+      ICCTestCase{1, 3, TEXT('B'), TEXT("aBBBaS")},
+      ICCTestCase{6, 2, TEXT('3'), TEXT("aBBBaS33")},
+      ICCTestCase{2, 4, TEXT('#'), TEXT("aB####BBaS33")},
+      ICCTestCase{0, 1, TEXT('x'), TEXT("xaB####BBaS33")},
+      ICCTestCase{13, 5, TEXT('Q'), TEXT("xaB####BBaS33QQQQQ")},
+      ICCTestCase{7, 3, TEXT('7'), TEXT("xaB####777BBaS33QQQQQ")},
+      ICCTestCase{10, 2, TEXT('@'), TEXT("xaB####777@@BBaS33QQQQQ")},
+      ICCTestCase{0, 6, TEXT('m'), TEXT("mmmmmmxaB####777@@BBaS33QQQQQ")},
+      ICCTestCase{29, 1, TEXT('Z'), TEXT("mmmmmmxaB####777@@BBaS33QQQQQZ")},
+      ICCTestCase{5, 8, TEXT('0'),
+                  TEXT("mmmmm00000000mxaB####777@@BBaS33QQQQQZ")},
+      ICCTestCase{20, 4, TEXT('!'),
+                  TEXT("mmmmm00000000mxaB###!!!!#777@@BBaS33QQQQQZ")},
+      ICCTestCase{0, 3, TEXT('k'),
+                  TEXT("kkkmmmmm00000000mxaB###!!!!#777@@BBaS33QQQQQZ")},
+      ICCTestCase{15, 2, TEXT('P'),
+                  TEXT("kkkmmmmm0000000PP0mxaB###!!!!#777@@BBaS33QQQQQZ")},
   };
 
   String s;
@@ -1850,7 +1850,7 @@ STRING_TEST_CASE(String, Insert_Count_Char) {
 }
 
 STRING_TEST_CASE(String, Insert_Pos_Count) {
-  struct InsertTestCase {
+  struct IPCTestCase {
     const CHAR* initial;
     const SizeType index;
     const CHAR* insert_str;
@@ -1859,20 +1859,18 @@ STRING_TEST_CASE(String, Insert_Pos_Count) {
     const CHAR* expected;
   };
 
-  static constexpr InsertTestCase test_cases[]{
-      InsertTestCase{TEXT(""), 0, TEXT("ABC"), 0, 0, TEXT("")},
-      InsertTestCase{TEXT("HELLO"), 0, TEXT("ABC"), 0, 1, TEXT("AHELLO")},
-      InsertTestCase{TEXT("HELLO"), 5, TEXT("ABC"), 1, 2, TEXT("HELLOBC")},
-      InsertTestCase{TEXT("HELLO"), 2, TEXT("ABCDEFG"), 2, 3, TEXT("HECDELLO")},
-      InsertTestCase{TEXT("12345"), 3, TEXT("ABCDE"), 0, 5, TEXT("123ABCDE45")},
-      InsertTestCase{TEXT("STARTEND"), 5, TEXT("----"), 0, 4,
-                     TEXT("START----END")},
-      InsertTestCase{TEXT("ABCDE"), 1, TEXT("123456789"), 3, 2,
-                     TEXT("A45BCDE")},
-      InsertTestCase{TEXT("XYZ"), 0, TEXT("HELLO"), 1, 3, TEXT("ELLXYZ")},
-      InsertTestCase{TEXT("TAIL"), 4, TEXT("123456"), 2, kNpos,
-                     TEXT("TAIL3456")},
-      InsertTestCase{TEXT("MID"), 1, TEXT("ABCDEFG"), 4, 100, TEXT("MEFGID")},
+  static constexpr IPCTestCase test_cases[]{
+      IPCTestCase{TEXT(""), 0, TEXT("ABC"), 0, 0, TEXT("")},
+      IPCTestCase{TEXT("HELLO"), 0, TEXT("ABC"), 0, 1, TEXT("AHELLO")},
+      IPCTestCase{TEXT("HELLO"), 5, TEXT("ABC"), 1, 2, TEXT("HELLOBC")},
+      IPCTestCase{TEXT("HELLO"), 2, TEXT("ABCDEFG"), 2, 3, TEXT("HECDELLO")},
+      IPCTestCase{TEXT("12345"), 3, TEXT("ABCDE"), 0, 5, TEXT("123ABCDE45")},
+      IPCTestCase{TEXT("STARTEND"), 5, TEXT("----"), 0, 4,
+                  TEXT("START----END")},
+      IPCTestCase{TEXT("ABCDE"), 1, TEXT("123456789"), 3, 2, TEXT("A45BCDE")},
+      IPCTestCase{TEXT("XYZ"), 0, TEXT("HELLO"), 1, 3, TEXT("ELLXYZ")},
+      IPCTestCase{TEXT("TAIL"), 4, TEXT("123456"), 2, kNpos, TEXT("TAIL3456")},
+      IPCTestCase{TEXT("MID"), 1, TEXT("ABCDEFG"), 4, 100, TEXT("MEFGID")},
   };
 
   for (const auto& test : test_cases) {
@@ -1891,5 +1889,449 @@ STRING_TEST_CASE(String, Insert_Pos_Count) {
       CHECK_STR_EQ(s.CStr(), test.expected);
       CHECK_EQ(s.Size(), expected_size);
     }
+  }
+}
+
+STRING_TEST_CASE(String, Comparison) {
+  struct CompareTestCase {
+    const CHAR* lhs;
+    const CHAR* rhs;
+    bool eq;
+    bool ne;
+    bool gt;
+    bool lt;
+    bool ge;
+    bool le;
+  };
+
+  static constexpr CompareTestCase test_cases[] = {
+      {TEXT(""), TEXT(""), true, false, false, false, true, true},
+      {TEXT(""), TEXT("A"), false, true, false, true, false, true},
+      {TEXT("A"), TEXT(""), false, true, true, false, true, false},
+
+      {TEXT("A"), TEXT("A"), true, false, false, false, true, true},
+      {TEXT("A"), TEXT("B"), false, true, false, true, false, true},
+      {TEXT("B"), TEXT("A"), false, true, true, false, true, false},
+
+      {TEXT("ABC"), TEXT("ABC"), true, false, false, false, true, true},
+      {TEXT("ABC"), TEXT("ABD"), false, true, false, true, false, true},
+      {TEXT("ABD"), TEXT("ABC"), false, true, true, false, true, false},
+
+      {TEXT("ABC"), TEXT("AB"), false, true, true, false, true, false},
+      {TEXT("AB"), TEXT("ABC"), false, true, false, true, false, true},
+
+      {TEXT("HELLO"), TEXT("HELLO"), true, false, false, false, true, true},
+      {TEXT("HELLO"), TEXT("HELL"), false, true, true, false, true, false},
+      {TEXT("HELL"), TEXT("HELLO"), false, true, false, true, false, true},
+
+      {TEXT("AAAA"), TEXT("ZZZZ"), false, true, false, true, false, true},
+      {TEXT("ZZZZ"), TEXT("AAAA"), false, true, true, false, true, false},
+
+      {TEXT("ABCDEF"), TEXT("ABCXYZ"), false, true, false, true, false, true},
+      {TEXT("ABCXYZ"), TEXT("ABCDEF"), false, true, true, false, true, false},
+
+      {TEXT("123"), TEXT("123"), true, false, false, false, true, true},
+      {TEXT("123"), TEXT("124"), false, true, false, true, false, true},
+      {TEXT("124"), TEXT("123"), false, true, true, false, true, false},
+
+      {TEXT("abc"), TEXT("abc"), true, false, false, false, true, true},
+      {TEXT("abc"), TEXT("abd"), false, true, false, true, false, true},
+      {TEXT("abd"), TEXT("abc"), false, true, true, false, true, false},
+      {TEXT("abc"), TEXT("ABC"), false, true, true, false, true, false},
+      {TEXT("ABC"), TEXT("abc"), false, true, false, true, false, true},
+
+      {TEXT("THIS_IS_A_LONG_STRING"), TEXT("THIS_IS_A_LONG_STRING"), true,
+       false, false, false, true, true},
+      {TEXT("THIS_IS_A_LONG_STRING"), TEXT("THIS_IS_A_LONG_STRINH"), false,
+       true, false, true, false, true},
+      {TEXT("THIS_IS_A_LONG_STRINH"), TEXT("THIS_IS_A_LONG_STRING"), false,
+       true, true, false, true, false},
+
+      {TEXT("!@#"), TEXT("!@#"), true, false, false, false, true, true},
+      {TEXT("!@#"), TEXT("!@$"), false, true, false, true, false, true},
+      {TEXT("!@$"), TEXT("!@#"), false, true, true, false, true, false},
+
+      {TEXT(" "), TEXT(" "), true, false, false, false, true, true},
+      {TEXT(" "), TEXT("  "), false, true, false, true, false, true},
+      {TEXT("  "), TEXT(" "), false, true, true, false, true, false},
+
+      {TEXT("\x01"), TEXT("\x02"), false, true, false, true, false, true},
+      {TEXT("\x02"), TEXT("\x01"), false, true, true, false, true, false},
+
+      {TEXT("ABCDE"), TEXT("ABCDF"), false, true, false, true, false, true},
+      {TEXT("ABCDF"), TEXT("ABCDE"), false, true, true, false, true, false},
+
+      {TEXT("!@#$%^&*()_+-=[]{}|;':,./<>?"),
+       TEXT("!@#$%^&*()_+-=[]{}|;':,./<>?"), true, false, false, false, true,
+       true},
+
+      {TEXT("!@#$%^&*()_+-=[]{}|;':,./<>?"),
+       TEXT("!@#$%^&*()_+-=[]{}|;':,./<>@"), false, true, false, true, false,
+       true},
+  };
+
+  for (const auto& test : test_cases) {
+    {
+      String lhs(test.lhs);
+
+      CHECK_EQ((lhs == test.rhs), test.eq);
+      CHECK_EQ((lhs != test.rhs), test.ne);
+      CHECK_EQ((lhs > test.rhs), test.gt);
+      CHECK_EQ((lhs < test.rhs), test.lt);
+      CHECK_EQ((lhs >= test.rhs), test.ge);
+      CHECK_EQ((lhs <= test.rhs), test.le);
+    }
+
+    {
+      String rhs(test.rhs);
+
+      CHECK_EQ((test.lhs == rhs), test.eq);
+      CHECK_EQ((test.lhs != rhs), test.ne);
+      CHECK_EQ((test.lhs > rhs), test.gt);
+      CHECK_EQ((test.lhs < rhs), test.lt);
+      CHECK_EQ((test.lhs >= rhs), test.ge);
+      CHECK_EQ((test.lhs <= rhs), test.le);
+    }
+
+    {
+      String lhs(test.lhs);
+      String rhs(test.rhs);
+
+      CHECK_EQ((lhs == rhs.CStr()), test.eq);
+      CHECK_EQ((lhs != rhs.CStr()), test.ne);
+      CHECK_EQ((lhs > rhs.CStr()), test.gt);
+      CHECK_EQ((lhs < rhs.CStr()), test.lt);
+      CHECK_EQ((lhs >= rhs.CStr()), test.ge);
+      CHECK_EQ((lhs <= rhs.CStr()), test.le);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, Substr) {
+  struct SubstrTestCase {
+    const CHAR* input;
+    SizeType pos;
+    SizeType count;
+    const CHAR* expected;
+  };
+
+  static constexpr SubstrTestCase test_cases[] = {
+      {TEXT("HELLO"), 0, 5, TEXT("HELLO")},
+      {TEXT("HELLO"), 0, 2, TEXT("HE")},
+      {TEXT("HELLO"), 1, 3, TEXT("ELL")},
+      {TEXT("HELLO"), 4, 1, TEXT("O")},
+      {TEXT("HELLO"), 0, kNpos, TEXT("HELLO")},
+      {TEXT("HELLO"), 2, kNpos, TEXT("LLO")},
+      {TEXT("HELLO"), 2, 100, TEXT("LLO")},
+      {TEXT("HELLO"), 4, 10, TEXT("O")},
+      {TEXT("HELLO"), 5, 0, TEXT("")},
+      {TEXT("HELLO"), 5, kNpos, TEXT("")},
+      {TEXT(""), 0, 0, TEXT("")},
+      {TEXT(""), 0, kNpos, TEXT("")},
+      {TEXT("A"), 0, 1, TEXT("A")},
+      {TEXT("A"), 0, kNpos, TEXT("A")},
+      {TEXT("A"), 1, 0, TEXT("")},
+      {TEXT("ABCDEFG"), 2, 3, TEXT("CDE")},
+      {TEXT("ABCDEFG"), 3, 2, TEXT("DE")},
+      {TEXT("ABCDEFG"), 4, 3, TEXT("EFG")},
+      {TEXT("ABCDEFG"), 4, 0, TEXT("")},
+      {TEXT("ABCDEFG"), 0, 0, TEXT("")},
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+       10, 20, TEXT("AAAAAAAAAAAAAAAAAAAA")},
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+       10, kNpos,
+       TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")},
+      {TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ"), 25, 100,
+       TEXT("ZABCDEFGHIJKLMNOPQRSTUVWXYZ")},
+      {TEXT("ABABABABABABABABABAB"), 1, 6, TEXT("BABABA")},
+      {TEXT("   HELLO WORLD   "), 3, 11, TEXT("HELLO WORLD")},
+      {TEXT("!@#$%^&*()_+-="), 5, 4, TEXT("^&*(")},
+      {TEXT("12345678901234567890"), 10, 5, TEXT("12345")},
+      {TEXT("aAaAaAaAaAaA"), 1, 5, TEXT("AaAaA")},
+  };
+
+  for (const auto& test : test_cases) {
+    String s(test.input);
+    String sub = s.Substr(test.pos, test.count);
+
+    CHECK_STR_EQ(sub.CStr(), test.expected);
+    CHECK_EQ(sub.Size(), CharTraits::length(test.expected));
+  }
+}
+
+STRING_TEST_CASE(String, Compare_Pos_Count_BasicString) {
+  struct CPCBTestCase {
+    const CHAR* lhs;
+    SizeType pos1;
+    SizeType count1;
+    const CHAR* rhs;
+    int expected_sign;
+  };
+
+  static constexpr CPCBTestCase test_cases[] = {
+      {TEXT("HELLO"), 0, 5, TEXT("HELLO"), 0},
+      {TEXT("HELLO"), 0, 4, TEXT("HELL"), 0},
+      {TEXT("HELLO"), 1, 3, TEXT("ELL"), 0},
+      {TEXT("HELLO"), 1, 3, TEXT("ELM"), -1},
+      {TEXT("HELLO"), 1, 3, TEXT("ELD"), +1},
+
+      {TEXT("HELLO"), 2, 100, TEXT("LLO"), 0},
+      {TEXT("HELLO"), 2, 100, TEXT("LLP"), -1},
+
+      {TEXT("HELLO"), 0, 3, TEXT("HELLO"), -1},
+      {TEXT("HELLO"), 0, 5, TEXT("HEL"), +1},
+
+      {TEXT("HELLO"), 5, 0, TEXT(""), 0},
+      {TEXT("HELLO"), 5, 0, TEXT("A"), -1},
+      {TEXT("HELLO"), 0, 0, TEXT(""), 0},
+  };
+
+  for (const auto& t : test_cases) {
+    String lhs(t.lhs);
+    String rhs(t.rhs);
+    int res = lhs.Compare(t.pos1, t.count1, rhs);
+    if (t.expected_sign == 0) {
+      CHECK_EQ(res, 0);
+    } else if (t.expected_sign < 0) {
+      CHECK_LT(res, 0);
+    } else {
+      CHECK_GT(res, 0);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, Compare_Pos_Pos_Count_BasicString) {
+  struct CPPCBTestCase {
+    const CHAR* lhs;
+    SizeType pos1;
+    SizeType count1;
+    const CHAR* rhs;
+    SizeType pos2;
+    SizeType count2;
+    int expected_sign;
+  };
+
+  static constexpr CPPCBTestCase test_cases[] = {
+      {TEXT("ABCDEFG"), 2, 3, TEXT("XXCDEYY"), 2, 3, 0},
+      {TEXT("ABCDEFG"), 2, 3, TEXT("XXCDFYY"), 2, 3, -1},
+      {TEXT("ABCDEFG"), 2, 3, TEXT("XXCDDYY"), 2, 3, +1},
+      {TEXT("ABCDEFG"), 2, 3, TEXT("XXCDEYY"), 2, kNpos, -1},
+      {TEXT("ABCDEFG"), 2, 3, TEXT("XXCD"), 2, 10, +1},
+      {TEXT("ABCDEFG"), 4, 100, TEXT("EFG"), 0, 3, 0},
+      {TEXT("ABC"), 3, 0, TEXT("XYZ"), 3, 0, 0},
+  };
+
+  for (const auto& t : test_cases) {
+    String lhs(t.lhs);
+
+    String rhs(t.rhs);
+    std::basic_string<CHAR> rhs_bs(t.rhs);
+    std::basic_string_view<CHAR> rhs_bsv(t.rhs);
+
+    {
+      int res = lhs.Compare(t.pos1, t.count1, rhs, t.pos2, t.count2);
+      if (t.expected_sign == 0) {
+        CHECK_EQ(res, 0);
+      } else if (t.expected_sign < 0) {
+        CHECK_LT(res, 0);
+      } else {
+        CHECK_GT(res, 0);
+      }
+    }
+    {
+      int res = lhs.Compare(t.pos1, t.count1, rhs_bs, t.pos2, t.count2);
+      if (t.expected_sign == 0) {
+        CHECK_EQ(res, 0);
+      } else if (t.expected_sign < 0) {
+        CHECK_LT(res, 0);
+      } else {
+        CHECK_GT(res, 0);
+      }
+    }
+    {
+      int res = lhs.Compare(t.pos1, t.count1, rhs_bsv, t.pos2, t.count2);
+      if (t.expected_sign == 0) {
+        CHECK_EQ(res, 0);
+      } else if (t.expected_sign < 0) {
+        CHECK_LT(res, 0);
+      } else {
+        CHECK_GT(res, 0);
+      }
+    }
+  }
+}
+
+STRING_TEST_CASE(String, Compare_Ptr_Count) {
+  struct CPCTestCase {
+    const CHAR* lhs;
+    const CHAR* rhs;
+    SizeType count;
+    int expected_sign;
+  };
+
+  static constexpr CPCTestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT("HELLO"), 5, 0},
+      {TEXT("HELLO"), TEXT("HELLOX"), 5, 0},
+      {TEXT("HELLO"), TEXT("HELLX"), 5, -1},
+      {TEXT("HELLO"), TEXT("HELL"), 5, +1},
+      {TEXT("HELLO"), TEXT("HE"), 2, +1},
+      {TEXT("HELLO"), TEXT("HF"), 2, -1},
+      {TEXT("HELLO"), TEXT("XXXXX"), 0, +1},
+      {TEXT(""), TEXT("XXXXX"), 0, 0},
+  };
+
+  for (const auto& t : test_cases) {
+    String lhs(t.lhs);
+
+    int res = lhs.Compare(t.rhs, t.count);
+    if (t.expected_sign == 0) {
+      CHECK_EQ(res, 0);
+    } else if (t.expected_sign < 0) {
+      CHECK_LT(res, 0);
+    } else {
+      CHECK_GT(res, 0);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, Compare_StringViewLike) {
+  struct CSVLTestCase {
+    const CHAR* lhs;
+    const CHAR* rhs;
+    int expected_sign;
+  };
+
+  static constexpr CSVLTestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT("HELLO"), 0}, {TEXT("HELLO"), TEXT("HELL"), +1},
+      {TEXT("HELL"), TEXT("HELLO"), -1}, {TEXT("ABC"), TEXT("ABD"), -1},
+      {TEXT("ABD"), TEXT("ABC"), +1},
+  };
+
+  for (const auto& t : test_cases) {
+    String lhs(t.lhs);
+    std::basic_string_view<CHAR> view(t.rhs);
+
+    int res1 = lhs.Compare(view);
+    int res2 = lhs.Compare(0, kNpos, view);
+    int res3 = lhs.Compare(0, kNpos, view, 0, kNpos);
+
+    if (t.expected_sign == 0) {
+      CHECK_EQ(res1, 0);
+      CHECK_EQ(res2, 0);
+      CHECK_EQ(res3, 0);
+    } else if (t.expected_sign < 0) {
+      CHECK_LT(res1, 0);
+      CHECK_LT(res2, 0);
+      CHECK_LT(res3, 0);
+    } else {
+      CHECK_GT(res1, 0);
+      CHECK_GT(res2, 0);
+      CHECK_GT(res3, 0);
+    }
+  }
+}
+
+STRING_TEST_CASE(String, StartsWith_EndsWith) {
+  struct SETestCase {
+    const CHAR* str;
+    const CHAR* prefix;
+    const CHAR* suffix;
+    CHAR c_start;
+    CHAR c_end;
+    bool sw_str;
+    bool ew_str;
+    bool sw_char;
+    bool ew_char;
+  };
+
+  static constexpr SETestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT("HE"), TEXT("LO"), TEXT('H'), TEXT('O'), true, true,
+       true, true},
+      {TEXT("HELLO"), TEXT("HELLO"), TEXT("HELLO"), TEXT('H'), TEXT('O'), true,
+       true, true, true},
+      {TEXT("HELLO"), TEXT("HELL"), TEXT("ELLO"), TEXT('H'), TEXT('O'), true,
+       true, true, true},
+      {TEXT("HELLO"), TEXT("HI"), TEXT("XO"), TEXT('X'), TEXT('X'), false,
+       false, false, false},
+      {TEXT("HELLO"), TEXT("HELLOO"), TEXT("HELLOO"), TEXT('H'), TEXT('O'),
+       false, false, true, true},
+      {TEXT(""), TEXT(""), TEXT(""), TEXT('A'), TEXT('A'), true, true, false,
+       false},
+      {TEXT(""), TEXT("A"), TEXT("A"), TEXT('A'), TEXT('A'), false, false,
+       false, false},
+      {TEXT("A"), TEXT("A"), TEXT("A"), TEXT('A'), TEXT('A'), true, true, true,
+       true},
+      {TEXT("A"), TEXT(""), TEXT(""), TEXT('A'), TEXT('A'), true, true, true,
+       true},
+      {TEXT("ABCDE"), TEXT("ABC"), TEXT("CDE"), TEXT('A'), TEXT('E'), true,
+       true, true, true},
+      {TEXT("ABCDE"), TEXT("BCD"), TEXT("BCD"), TEXT('B'), TEXT('D'), false,
+       false, false, false},
+      {TEXT("AAAAA"), TEXT("AAA"), TEXT("AAA"), TEXT('A'), TEXT('A'), true,
+       true, true, true},
+      {TEXT("   SPACE"), TEXT("   "), TEXT("ACE"), TEXT(' '), TEXT('E'), true,
+       true, true, true},
+      {TEXT("SPACE   "), TEXT("SPA"), TEXT("   "), TEXT('S'), TEXT(' '), true,
+       true, true, true},
+      {TEXT("LINE1\nLINE2"), TEXT("LINE1"), TEXT("LINE2"), TEXT('L'), TEXT('2'),
+       true, true, true, true},
+      {TEXT("!@#$%^"), TEXT("!@#"), TEXT("^"), TEXT('!'), TEXT('^'), true, true,
+       true, true},
+      {TEXT("ABC"), TEXT("ABC"), TEXT("BC"), TEXT('A'), TEXT('C'), true, true,
+       true, true},
+      {TEXT("ABC"), TEXT("ABCD"), TEXT("ABCD"), TEXT('A'), TEXT('C'), false,
+       false, true, true},
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+       TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+       TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAA"), TEXT('A'), TEXT('A'), true, true,
+       true, true},
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB"),
+       TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+       TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAC"), TEXT('A'), TEXT('B'), true, false,
+       true, true},
+      {TEXT("ZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+       TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+       TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAA"), TEXT('Z'), TEXT('A'), false, true,
+       true, true},
+      {TEXT("ABABABABABABABABABABABABABABABAB"), TEXT("ABABABABAB"),
+       TEXT("ABABABABAB"), TEXT('A'), TEXT('B'), true, true, true, true},
+      {TEXT("aAaAaAaAaAaAaAaAaA"), TEXT("aAaAaA"), TEXT("AaAaAa"), TEXT('a'),
+       TEXT('A'), true, false, true, true},
+      {TEXT("        MANY SPACES        "), TEXT("        "), TEXT(" "),
+       TEXT(' '), TEXT(' '), true, true, true, true},
+      {TEXT("\t\tLINE1\nLINE2\n"), TEXT("\t\t"), TEXT("LINE2\n"), TEXT('\t'),
+       TEXT('\n'), true, true, true, true},
+      {TEXT("!@#$%^&*()_+-=[]{}|;':,./<>?!@#$%^&*()"), TEXT("!@#$%^&*()"),
+       TEXT("!@#$%^&*()"), TEXT('!'), TEXT(')'), true, true, true, true},
+      {TEXT("LONGSTRINGTEST"), TEXT("LONGSTRINGTEST"), TEXT("TEST"), TEXT('L'),
+       TEXT('T'), true, true, true, true},
+      {TEXT("LONGSTRINGTEST"), TEXT("LONG"), TEXT("LONGSTRINGTEST"), TEXT('L'),
+       TEXT('T'), true, true, true, true},
+      {TEXT("SHORT"), TEXT("SHORTER"), TEXT("SHORTER"), TEXT('S'), TEXT('T'),
+       false, false, true, true},
+      {TEXT("SHORT"), TEXT("SH"), TEXT("LONGSHORT"), TEXT('S'), TEXT('T'), true,
+       false, true, true},
+      {TEXT("VERYVERYLONGSTRINGTHATKEEPSGOING"), TEXT(""), TEXT(""), TEXT('V'),
+       TEXT('G'), true, true, true, true},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.str);
+
+    String prefix(t.prefix);
+    String suffix(t.suffix);
+
+    std::basic_string_view<CHAR> prefix_view(t.prefix);
+    std::basic_string_view<CHAR> suffix_view(t.suffix);
+
+    CHECK_EQ(s.StartsWith(t.c_start), t.sw_char);
+    CHECK_EQ(s.StartsWith(t.prefix), t.sw_str);
+    CHECK_EQ(s.StartsWith(prefix), t.sw_str);
+    CHECK_EQ(s.StartsWith(prefix_view), t.sw_str);
+
+    CHECK_EQ(s.EndsWith(t.c_end), t.ew_char);
+    CHECK_EQ(s.EndsWith(t.suffix), t.ew_str);
+    CHECK_EQ(s.EndsWith(suffix), t.ew_str);
+    CHECK_EQ(s.EndsWith(suffix_view), t.ew_str);
   }
 }
