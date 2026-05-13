@@ -1265,8 +1265,7 @@ class BasicString : private internal::AllocatorHolder<A> {
   Bool Contains(const BasicString& s) const { return Find(s) != kNpos; }
 
   template <typename StringViewLike,
-            typename BasicString<T, Traits, A>::
-                template EnableIfIsStringViewLike<StringViewLike, int>>
+            EnableIfIsStringViewLike<StringViewLike, int> = 0>
   Bool Contains(const StringViewLike& s) const {
     const StringViewType view(s);
     return Find(view.data(), 0, static_cast<SizeType>(view.size())) != kNpos;

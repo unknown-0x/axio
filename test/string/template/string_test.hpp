@@ -2335,3 +2335,672 @@ STRING_TEST_CASE(String, StartsWith_EndsWith) {
     CHECK_EQ(s.EndsWith(suffix_view), t.ew_str);
   }
 }
+
+STRING_TEST_CASE(String, Contains_AllOverloads) {
+  struct TestCase {
+    const CHAR* lhs;
+    const CHAR* rhs;
+    bool expected_char;
+    bool expected_substr;
+  };
+
+  static constexpr TestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT("HELLO"), true, true},
+      {TEXT("HELLO"), TEXT("HELL"), true, true},
+      {TEXT("HELL"), TEXT("HELLO"), true, false},
+      {TEXT("ABCDEF"), TEXT("BCD"), true, true},
+      {TEXT("ABCDEF"), TEXT("ABX"), true, false},
+      {TEXT(""), TEXT(""), false, true},
+      {TEXT(""), TEXT("A"), false, false},
+      {TEXT("A"), TEXT(""), false, true},
+      {TEXT("ABCABC"), TEXT("ABC"), true, true},
+      {TEXT("ABCDE"), TEXT("E"), true, true},
+      {TEXT("ABCDE"), TEXT("Z"), false, false},
+      {TEXT("AAAAAAAAAA"), TEXT("AAAAAAAAAA"), true, true},
+      {TEXT("AAAAAAAAAA"), TEXT("AAAAAAAAAAA"), true, false},
+      {TEXT("AAAAAAAAAA"), TEXT("AAAAAAAAAAB"), true, false},
+      {TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+       TEXT("JKLMNOPQR"), true, true},
+      {TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+       TEXT("QRSTUVWXYZABCD"), true, true},
+      {TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+       TEXT("XYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ"), true,
+       false},
+      {TEXT("THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG"), TEXT("BROWNFOXJUMPS"), true,
+       true},
+      {TEXT("THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG"), TEXT("JUMPSOVERTHESKY"),
+       true, false},
+      {TEXT("123456789012345678901234567890"), TEXT("5678901234"), true, true},
+      {TEXT("123456789012345678901234567890"),
+       TEXT("567890123456789012345678901234567890123456789012345"), true,
+       false},
+      {TEXT("AAAAAAAAAABBBBBBBBBBCCCCCCCCCC"), TEXT("BBBBBBBBBBCCCC"), true,
+       true},
+      {TEXT("AAAAAAAAAABBBBBBBBBBCCCCCCCCCC"),
+       TEXT("FCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEF"), false, false},
+  };
+
+  for (const auto& t : test_cases) {
+    String lhs(t.lhs);
+
+    CHAR rhs_c = t.rhs[0];
+    const CHAR* rhs_cc = t.rhs;
+    String rhs_str(t.rhs);
+    std::basic_string_view<CHAR> rhs_view(t.rhs);
+
+    bool r1 = lhs.Contains(rhs_c);
+    bool r2 = lhs.Contains(rhs_cc);
+    bool r3 = lhs.Contains(rhs_str);
+    bool r4 = lhs.Contains(rhs_view);
+
+    CHECK_EQ(r1, t.expected_char);
+    CHECK_EQ(r2, t.expected_substr);
+    CHECK_EQ(r3, t.expected_substr);
+    CHECK_EQ(r4, t.expected_substr);
+  }
+}
+
+namespace {
+static constexpr CHAR kBig1[] =
+    TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
+static constexpr CHAR kBig2[] =
+    TEXT("THEQUICKBROWNFOXJUMPSOVERTHELAZYDOGTHEQUICKBROWNFOX");
+
+static constexpr CHAR kBig3[] =
+    TEXT("12345678901234567890123456789012345678901234567890");
+}  // namespace
+
+STRING_TEST_CASE(String, Find_ValueType) {
+  struct FVTestCase {
+    const CHAR* lhs;
+    CHAR ch;
+    SizeType pos;
+    SizeType expected;
+  };
+
+  static constexpr FVTestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT('H'), 0, 0},
+      {TEXT("HELLO"), TEXT('E'), 0, 1},
+      {TEXT("HELLO"), TEXT('L'), 0, 2},
+      {TEXT("HELLO"), TEXT('L'), 3, 3},
+      {TEXT("HELLO"), TEXT('O'), 0, 4},
+      {TEXT("HELLO"), TEXT('Z'), 0, kNpos},
+      {TEXT("HELLO"), TEXT('H'), 1, kNpos},
+      {TEXT("AAAAAA"), TEXT('A'), 0, 0},
+      {TEXT("AAAAAA"), TEXT('A'), 3, 3},
+      {TEXT("AAAAAA"), TEXT('A'), 6, kNpos},
+      {TEXT("ABABABAB"), TEXT('B'), 0, 1},
+      {TEXT("ABABABAB"), TEXT('B'), 2, 3},
+      {TEXT("ABABABAB"), TEXT('B'), 7, 7},
+      {TEXT(""), TEXT('A'), 0, kNpos},
+      {TEXT("A"), TEXT('A'), 0, 0},
+      {TEXT("A"), TEXT('A'), 1, kNpos},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    CHECK_EQ(s.Find(t.ch, t.pos), t.expected);
+  }
+}
+
+STRING_TEST_CASE(String, Find_Pointer_Count) {
+  struct FPCTestCase {
+    const CHAR* lhs;
+    const CHAR* rhs;
+    SizeType pos;
+    SizeType count;
+    SizeType expected;
+  };
+
+  static constexpr FPCTestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT("HE"), 0, 2, 0},
+      {TEXT("HELLO"), TEXT("ELL"), 0, 3, 1},
+      {TEXT("HELLO"), TEXT("LL"), 0, 2, 2},
+      {TEXT("HELLO"), TEXT("LO"), 0, 2, 3},
+      {TEXT("HELLO"), TEXT("HELLO"), 0, 5, 0},
+
+      {TEXT("HELLOHELLO"), TEXT("HELLO"), 0, 5, 0},
+      {TEXT("HELLOHELLO"), TEXT("HELLO"), 1, 5, 5},
+
+      {TEXT("ABCDE"), TEXT("BC"), 0, 2, 1},
+      {TEXT("ABCDE"), TEXT("BC"), 2, 2, kNpos},
+
+      {TEXT("AAAAAA"), TEXT("AAA"), 0, 3, 0},
+      {TEXT("AAAAAA"), TEXT("AAA"), 1, 3, 1},
+      {TEXT("AAAAAA"), TEXT("AAA"), 4, 3, kNpos},
+
+      {TEXT("ABABABAB"), TEXT("BAB"), 0, 3, 1},
+      {TEXT("ABABABAB"), TEXT("BAB"), 2, 3, 3},
+
+      {TEXT(""), TEXT(""), 0, 0, 0},
+      {TEXT("A"), TEXT(""), 0, 0, 0},
+      {TEXT("A"), TEXT("A"), 0, 1, 0},
+      {TEXT("A"), TEXT("A"), 1, 1, kNpos},
+
+      {TEXT("SHORT"), TEXT("LONGER"), 0, 6, kNpos},
+
+      {kBig1, TEXT("JKLMNOPQR"), 0, 9, 9},
+      {kBig1, TEXT("QRSTUVWXYZ"), 0, 10, 16},
+      {kBig1, TEXT("XYZ"), 0, 3, 23},
+      {kBig1, TEXT("ABC"), 1, 3, 26},
+
+      {kBig2, TEXT("BROWNFOX"), 0, 8, 8},
+      {kBig2, TEXT("JUMPSOVER"), 0, 9, 16},
+      {kBig2, TEXT("LAZYDOG"), 0, 7, 28},
+      {kBig2, TEXT("NOTFOUND"), 0, 8, kNpos},
+
+      {kBig3, TEXT("5678901234"), 0, 10, 4},
+      {kBig3, TEXT("89012345"), 0, 8, 7},
+      {kBig3, TEXT("1234567890"), 10, 10, 10},
+      {kBig3, TEXT("1234567890"), 11, 10, 20},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    CHECK_EQ(s.Find(t.rhs, t.pos, t.count), t.expected);
+  }
+}
+
+STRING_TEST_CASE(String, RFind_ValueType) {
+  struct RFVTestCase {
+    const CHAR* lhs;
+    CHAR ch;
+    SizeType pos;
+    SizeType expected;
+  };
+
+  static constexpr RFVTestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT('H'), kNpos, 0},
+      {TEXT("HELLO"), TEXT('O'), kNpos, 4},
+      {TEXT("HELLO"), TEXT('L'), kNpos, 3},
+      {TEXT("HELLO"), TEXT('L'), 2, 2},
+      {TEXT("HELLO"), TEXT('L'), 1, kNpos},
+      {TEXT("HELLO"), TEXT('Z'), kNpos, kNpos},
+
+      {TEXT("AAAAAA"), TEXT('A'), kNpos, 5},
+      {TEXT("AAAAAA"), TEXT('A'), 3, 3},
+      {TEXT("AAAAAA"), TEXT('A'), 2, 2},
+      {TEXT("AAAAAA"), TEXT('A'), 0, 0},
+
+      {TEXT("ABABABAB"), TEXT('B'), kNpos, 7},
+      {TEXT("ABABABAB"), TEXT('B'), 6, 5},
+      {TEXT("ABABABAB"), TEXT('B'), 1, 1},
+
+      {TEXT("A"), TEXT('A'), kNpos, 0},
+      {TEXT("A"), TEXT('A'), 0, 0},
+      {TEXT("A"), TEXT('A'), 1, 0},
+
+      {TEXT(""), TEXT('A'), kNpos, kNpos},
+      {TEXT(""), TEXT('A'), 0, kNpos},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    CHECK_EQ(s.RFind(t.ch, t.pos), t.expected);
+  }
+}
+
+STRING_TEST_CASE(String, RFind_Pointer_Count) {
+  struct RFPCTestCase {
+    const CHAR* lhs;
+    const CHAR* rhs;
+    SizeType pos;
+    SizeType count;
+    SizeType expected;
+  };
+
+  static constexpr RFPCTestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT("HE"), kNpos, 2, 0},
+      {TEXT("HELLO"), TEXT("EL"), kNpos, 2, 1},
+      {TEXT("HELLO"), TEXT("LL"), kNpos, 2, 2},
+      {TEXT("HELLO"), TEXT("LO"), kNpos, 2, 3},
+      {TEXT("HELLOHELLO"), TEXT("HELLO"), kNpos, 5, 5},
+      {TEXT("HELLOHELLO"), TEXT("HELLO"), 6, 5, 5},
+      {TEXT("HELLOHELLO"), TEXT("HELLO"), 4, 5, 0},
+      {TEXT("AAAAAA"), TEXT("AAA"), kNpos, 3, 3},
+      {TEXT("AAAAAA"), TEXT("AAA"), 5, 3, 3},
+      {TEXT("AAAAAA"), TEXT("AAA"), 2, 3, 2},
+      {TEXT("AAAAAA"), TEXT("AAA"), 1, 3, 1},
+      {TEXT("ABABABAB"), TEXT("BAB"), kNpos, 3, 5},
+      {TEXT("ABABABAB"), TEXT("BAB"), 6, 3, 5},
+      {TEXT("ABABABAB"), TEXT("BAB"), 4, 3, 3},
+      {TEXT("ABCDEF"), TEXT("BCD"), kNpos, 3, 1},
+      {TEXT("ABCDEF"), TEXT("BCD"), 0, 3, kNpos},
+      {TEXT(""), TEXT(""), 0, 0, 0},
+      {TEXT("A"), TEXT(""), 0, 0, 0},
+      {TEXT("A"), TEXT("A"), 0, 1, 0},
+      {TEXT("A"), TEXT("A"), 1, 1, 0},
+      {TEXT("SHORT"), TEXT("LONGER"), kNpos, 6, kNpos},
+      {kBig1, TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), kNpos, 26, 26},
+      {kBig1, TEXT("XYZ"), kNpos, 3, 49},
+      {kBig1, TEXT("ABC"), kNpos, 3, 26},
+
+      {kBig2, TEXT("BROWNFOX"), kNpos, 8, 43},
+      {kBig2, TEXT("BROWNFOX"), 40, 8, 8},
+      {kBig2, TEXT("LAZYDOG"), kNpos, 7, 28},
+      {kBig2, TEXT("FOX"), kNpos, 3, 48},
+
+      {kBig3, TEXT("5678901234"), kNpos, 10, 34},
+      {kBig3, TEXT("1234567890"), kNpos, 10, 40},
+      {kBig3, TEXT("1234567890"), 30, 10, 30},
+
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), TEXT("AAAAA"),
+       kNpos, 5, 39},
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), TEXT("AAAAA"), 30,
+       5, 30},
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), TEXT("AAAAA"), 10,
+       5, 10},
+
+      {TEXT("ABABABABABABABABAB"), TEXT("BAB"), kNpos, 3, 15},
+      {TEXT("ABABABABABABABABAB"), TEXT("BAB"), 10, 3, 9},
+
+      {TEXT("EDGECASEEDGECASEEDGECASE"), TEXT("EDGE"), kNpos, 4, 16},
+      {TEXT("EDGECASEEDGECASEEDGECASE"), TEXT("CASE"), kNpos, 4, 20},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    CHECK_EQ(s.RFind(t.rhs, t.pos, t.count), t.expected);
+  }
+}
+
+STRING_TEST_CASE(String, FindFirstOf_ValueType) {
+  struct FFOVTestCase {
+    const CHAR* lhs;
+    CHAR ch;
+    SizeType pos;
+    SizeType expected;
+  };
+
+  static constexpr FFOVTestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT('H'), 0, 0},
+      {TEXT("HELLO"), TEXT('E'), 0, 1},
+      {TEXT("HELLO"), TEXT('L'), 0, 2},
+      {TEXT("HELLO"), TEXT('L'), 3, 3},
+      {TEXT("HELLO"), TEXT('O'), 0, 4},
+      {TEXT("HELLO"), TEXT('Z'), 0, kNpos},
+      {TEXT("HELLO"), TEXT('H'), 1, kNpos},
+
+      {TEXT("AAAAAA"), TEXT('A'), 0, 0},
+      {TEXT("AAAAAA"), TEXT('A'), 4, 4},
+      {TEXT("AAAAAA"), TEXT('A'), 6, kNpos},
+
+      {TEXT("ABABABAB"), TEXT('B'), 0, 1},
+      {TEXT("ABABABAB"), TEXT('B'), 2, 3},
+      {TEXT("ABABABAB"), TEXT('B'), 7, 7},
+
+      {TEXT(""), TEXT('A'), 0, kNpos},
+      {TEXT("A"), TEXT('A'), 0, 0},
+      {TEXT("A"), TEXT('A'), 1, kNpos},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    const auto result = s.FindFirstOf(t.ch, t.pos);
+    CHECK_EQ(result, t.expected);
+  }
+}
+
+STRING_TEST_CASE(String, FindFirstOf_Pointer_Count) {
+  struct FFOPCTestCase {
+    const CHAR* lhs;
+    const CHAR* set;
+    SizeType pos;
+    SizeType count;
+    SizeType expected;
+  };
+
+  static constexpr FFOPCTestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT("AEIOU"), 0, 5, 1},
+      {TEXT("HELLO"), TEXT("XYZLO"), 0, 5, 2},
+      {TEXT("HELLO"), TEXT("O"), 0, 1, 4},
+
+      {TEXT("ABCDE"), TEXT("XYZ"), 0, 3, kNpos},
+      {TEXT("ABCDE"), TEXT("CDE"), 0, 3, 2},
+
+      {TEXT("ABABABAB"), TEXT("B"), 0, 1, 1},
+      {TEXT("ABABABAB"), TEXT("BA"), 0, 2, 0},
+      {TEXT("ABABABAB"), TEXT("CBA"), 0, 3, 0},
+
+      {TEXT("AAAAAA"), TEXT("BCA"), 0, 3, 0},
+      {TEXT("AAAAAA"), TEXT("B"), 0, 1, kNpos},
+
+      {TEXT(""), TEXT("A"), 0, 1, kNpos},
+      {TEXT("A"), TEXT(""), 0, 0, kNpos},
+      {TEXT("A"), TEXT("A"), 0, 1, 0},
+
+      {TEXT("HELLOHELLO"), TEXT("LO"), 0, 2, 2},
+      {TEXT("HELLOHELLO"), TEXT("LO"), 4, 2, 4},
+
+      {TEXT("EDGECASE"), TEXT("CASE"), 0, 4, 0},
+
+      {kBig1, TEXT("XYZ"), 0, 3, 23},
+      {kBig1, TEXT("ABC"), 1, 3, 1},
+
+      {kBig2, TEXT("QWERTYUIOP"), 0, 10, 0},
+      {kBig2, TEXT("FOX"), 0, 3, 10},
+      {kBig2, TEXT("DOG"), 0, 3, 10},
+      {kBig2, TEXT("XYZ"), 0, 3, 15},
+
+      {kBig3, TEXT("567890"), 0, 6, 4},
+      {kBig3, TEXT("0123"), 0, 4, 0},
+
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), TEXT("BCDA"), 0, 4, 0},
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), TEXT("BCDA"), 10, 4, 10},
+
+      {TEXT("ABABABABABABABABAB"), TEXT("B"), 0, 1, 1},
+      {TEXT("ABABABABABABABABAB"), TEXT("B"), 5, 1, 5},
+
+      {TEXT("EDGEEDGEEDGEEDGE"), TEXT("GDE"), 0, 3, 0},
+
+      {TEXT(""), TEXT("ABC"), 0, 3, kNpos},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    const auto result = s.FindFirstOf(t.set, t.pos, t.count);
+    CHECK_EQ(result, t.expected);
+  }
+}
+
+STRING_TEST_CASE(String, FindFirstNotOf_ValueType) {
+  struct FFNVTestCase {
+    const CHAR* lhs;
+    CHAR ch;
+    SizeType pos;
+    SizeType expected;
+  };
+
+  static constexpr FFNVTestCase test_cases[] = {
+      {TEXT("AAAAAA"), TEXT('A'), 0, kNpos},
+      {TEXT("AAAAAB"), TEXT('A'), 0, 5},
+      {TEXT("BAAAAA"), TEXT('A'), 0, 0},
+      {TEXT("BAAAAA"), TEXT('A'), 1, kNpos},
+
+      {TEXT("HELLO"), TEXT('H'), 0, 1},
+      {TEXT("HELLO"), TEXT('E'), 0, 0},
+      {TEXT("HELLO"), TEXT('L'), 0, 0},
+      {TEXT("HELLO"), TEXT('L'), 3, 4},
+      {TEXT("HELLO"), TEXT('O'), 0, 0},
+
+      {TEXT("ABABABAB"), TEXT('A'), 0, 1},
+      {TEXT("ABABABAB"), TEXT('B'), 0, 0},
+
+      {TEXT("A"), TEXT('A'), 0, kNpos},
+      {TEXT("A"), TEXT('A'), 1, kNpos},
+      {TEXT("A"), TEXT('B'), 0, 0},
+
+      {TEXT(""), TEXT('A'), 0, kNpos},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    const auto result = s.FindFirstNotOf(t.ch, t.pos);
+    CHECK_EQ(result, t.expected);
+  }
+}
+
+STRING_TEST_CASE(String, FindFirstNotOf_Pointer_Count) {
+  struct FFNPCTestCase {
+    const CHAR* lhs;
+    const CHAR* set;
+    SizeType pos;
+    SizeType count;
+    SizeType expected;
+  };
+
+  static constexpr FFNPCTestCase test_cases[] = {
+      {TEXT("AAAAAA"), TEXT("A"), 0, 1, kNpos},
+      {TEXT("AAAAB"), TEXT("A"), 0, 1, 4},
+      {TEXT("BAAAAA"), TEXT("A"), 0, 1, 0},
+      {TEXT("BAAAAA"), TEXT("A"), 1, 1, kNpos},
+
+      {TEXT("HELLO"), TEXT("HELLO"), 0, 5, kNpos},
+      {TEXT("HELLO"), TEXT("HEL"), 0, 3, 4},
+      {TEXT("HELLO"), TEXT("ELL"), 0, 3, 0},
+      {TEXT("HELLO"), TEXT("LO"), 0, 2, 0},
+
+      {TEXT("ABCDEF"), TEXT("ABC"), 0, 3, 3},
+      {TEXT("ABCDEF"), TEXT("DEF"), 0, 3, 0},
+
+      {TEXT("ABABABAB"), TEXT("AB"), 0, 2, kNpos},
+      {TEXT("ABABABAB"), TEXT("A"), 0, 1, 1},
+
+      {TEXT("A"), TEXT("A"), 0, 1, kNpos},
+      {TEXT("A"), TEXT("B"), 0, 1, 0},
+
+      {TEXT(""), TEXT("A"), 0, 1, kNpos},
+
+      {kBig1, TEXT("A"), 0, 1, 1},
+      {kBig1, TEXT("A"), 10, 1, 10},
+
+      {kBig2, TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 26, kNpos},
+      {kBig2, TEXT("ABCDEF"), 0, 6, 0},
+      {kBig2, TEXT("XYZ"), 0, 3, 0},
+      {kBig2, TEXT("XYZ"), 23, 3, 23},
+
+      {kBig3, TEXT("AEIOU"), 0, 5, 0},
+      {kBig3, TEXT("QWERTYUIOPASDFGHJKLZXCVBNM"), 0, 26, 0},
+      {kBig3, TEXT("BCDFG"), 0, 5, 0},
+      {kBig3, TEXT("BCDFG"), 10, 5, 10},
+
+      {TEXT("EDGECASEEDGECASEEDGECASE"), TEXT("EDGE"), 0, 4, 4},
+      {TEXT("EDGECASEEDGECASEEDGECASE"), TEXT("CASE"), 0, 4, 1},
+
+      {TEXT(""), TEXT("ABC"), 0, 3, kNpos},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    const auto result = s.FindFirstNotOf(t.set, t.pos, t.count);
+    CHECK_EQ(result, t.expected);
+  }
+}
+
+STRING_TEST_CASE(String, FindLastOf_ValueType) {
+  struct FLVTestCase {
+    const CHAR* lhs;
+    CHAR ch;
+    SizeType pos;
+    SizeType expected;
+  };
+
+  static constexpr FLVTestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT('L'), kNpos, 3},
+      {TEXT("HELLO"), TEXT('H'), kNpos, 0},
+      {TEXT("HELLO"), TEXT('O'), kNpos, 4},
+      {TEXT("HELLO"), TEXT('E'), kNpos, 1},
+      {TEXT("HELLO"), TEXT('Z'), kNpos, kNpos},
+
+      {TEXT("HELLO"), TEXT('L'), 2, 2},
+      {TEXT("HELLO"), TEXT('L'), 1, kNpos},
+
+      {TEXT("AAAAAA"), TEXT('A'), kNpos, 5},
+      {TEXT("AAAAAA"), TEXT('A'), 3, 3},
+      {TEXT("AAAAAA"), TEXT('A'), 0, 0},
+
+      {TEXT("ABABABAB"), TEXT('B'), kNpos, 7},
+      {TEXT("ABABABAB"), TEXT('B'), 5, 5},
+      {TEXT("ABABABAB"), TEXT('B'), 0, kNpos},
+
+      {TEXT("A"), TEXT('A'), kNpos, 0},
+      {TEXT("A"), TEXT('A'), 0, 0},
+      {TEXT("A"), TEXT('A'), 1, 0},
+
+      {TEXT(""), TEXT('A'), kNpos, kNpos},
+  };
+
+  int i = 0;
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    const auto result = s.FindLastOf(t.ch, t.pos);
+    CHECK_EQ(result, t.expected);
+    if (result != t.expected) {
+      printf("%d\n", i);
+    }
+    ++i;
+  }
+}
+
+STRING_TEST_CASE(String, FindLastOf_Pointer_Count) {
+  struct FLPCTestCase {
+    const CHAR* lhs;
+    const CHAR* set;
+    SizeType pos;
+    SizeType count;
+    SizeType expected;
+  };
+
+  static constexpr FLPCTestCase test_cases[] = {
+      {TEXT("HELLO"), TEXT("LO"), kNpos, 2, 4},
+      {TEXT("HELLO"), TEXT("LO"), 3, 2, 3},
+      {TEXT("HELLO"), TEXT("LO"), 2, 2, 2},
+
+      {TEXT("HELLO"), TEXT("HEL"), kNpos, 3, 3},
+      {TEXT("HELLO"), TEXT("HEL"), 2, 3, 2},
+      {TEXT("HELLO"), TEXT("HEL"), 0, 3, 0},
+
+      {TEXT("ABCDE"), TEXT("ABC"), kNpos, 3, 2},
+      {TEXT("ABCDE"), TEXT("ABC"), 1, 3, 1},
+      {TEXT("ABCDE"), TEXT("ABC"), 0, 3, 0},
+
+      {TEXT("ABABABAB"), TEXT("AB"), kNpos, 2, 7},
+      {TEXT("ABABABAB"), TEXT("AB"), 5, 2, 5},
+      {TEXT("ABABABAB"), TEXT("B"), kNpos, 1, 7},
+
+      {TEXT("A"), TEXT("A"), kNpos, 1, 0},
+      {TEXT("A"), TEXT("B"), kNpos, 1, kNpos},
+
+      {TEXT(""), TEXT("A"), kNpos, 1, kNpos},
+      {TEXT("HELLO"), TEXT(""), kNpos, 0, kNpos},
+
+      {kBig1, TEXT("XYZ"), kNpos, 3, 51},
+      {kBig1, TEXT("ABC"), kNpos, 3, 28},
+
+      {kBig2, TEXT("FOX"), kNpos, 3, 50},
+      {kBig2, TEXT("FOX"), 40, 3, 33},
+      {kBig2, TEXT("FOX"), 10, 3, 10},
+
+      {kBig2, TEXT("DOG"), kNpos, 3, 49},
+      {kBig2, TEXT("DOG"), 30, 3, 21},
+
+      {kBig3, TEXT("567890"), kNpos, 6, 49},
+      {kBig3, TEXT("123456"), kNpos, 6, 45},
+
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAB"), TEXT("AB"), kNpos, 2, 29},
+
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAB"), TEXT("AB"), 20, 2, 20},
+
+      {TEXT("ABABABABABABABABAB"), TEXT("B"), kNpos, 1, 17},
+      {TEXT("ABABABABABABABABAB"), TEXT("A"), kNpos, 1, 16},
+
+      {TEXT("EDGEEDGEEDGEEDGE"), TEXT("EDGE"), kNpos, 4, 15},
+      {TEXT("EDGEEDGEEDGEEDGE"), TEXT("E"), kNpos, 1, 15},
+
+      {TEXT(""), TEXT("ABC"), kNpos, 3, kNpos},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    const auto result = s.FindLastOf(t.set, t.pos, t.count);
+    CHECK_EQ(result, t.expected);
+  }
+}
+
+STRING_TEST_CASE(String, FindLastNotOf_ValueType) {
+  struct FLNVTestCase {
+    const CHAR* lhs;
+    CHAR ch;
+    SizeType pos;
+    SizeType expected;
+  };
+
+  static constexpr FLNVTestCase test_cases[] = {
+      {TEXT("AAAAAA"), TEXT('A'), kNpos, kNpos},
+      {TEXT("AAAAAB"), TEXT('A'), kNpos, 5},
+      {TEXT("BAAAAA"), TEXT('A'), kNpos, 0},
+      {TEXT("BAAAAA"), TEXT('A'), 0, 0},
+      {TEXT("BAAAAA"), TEXT('B'), kNpos, 5},
+
+      {TEXT("HELLO"), TEXT('H'), kNpos, 4},
+      {TEXT("HELLO"), TEXT('E'), kNpos, 4},
+      {TEXT("HELLO"), TEXT('L'), kNpos, 4},
+      {TEXT("HELLO"), TEXT('O'), kNpos, 3},
+
+      {TEXT("ABABABAB"), TEXT('A'), kNpos, 7},
+      {TEXT("ABABABAB"), TEXT('B'), kNpos, 6},
+
+      {TEXT("A"), TEXT('A'), kNpos, kNpos},
+      {TEXT("A"), TEXT('B'), kNpos, 0},
+
+      {TEXT(""), TEXT('A'), kNpos, kNpos},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    const auto result = s.FindLastNotOf(t.ch, t.pos);
+    CHECK_EQ(result, t.expected);
+  }
+}
+
+STRING_TEST_CASE(String, FindLastNotOf_Pointer_Count) {
+  struct FLNPCTestCase {
+    const CHAR* lhs;
+    const CHAR* set;
+    SizeType pos;
+    SizeType count;
+    SizeType expected;
+  };
+
+  static constexpr FLNPCTestCase test_cases[] = {
+      {TEXT("AAAAAA"), TEXT("A"), kNpos, 1, kNpos},
+      {TEXT("AAAABB"), TEXT("A"), kNpos, 1, 5},
+      {TEXT("BAAAAA"), TEXT("A"), kNpos, 1, 0},
+      {TEXT("BAAAAA"), TEXT("A"), 3, 1, 0},
+
+      {TEXT("HELLO"), TEXT("HELLO"), kNpos, 5, kNpos},
+      {TEXT("HELLO"), TEXT("HELL"), kNpos, 4, 4},
+      {TEXT("HELLO"), TEXT("LO"), kNpos, 2, 1},
+      {TEXT("HELLO"), TEXT("LO"), 2, 2, 1},
+
+      {TEXT("ABCDE"), TEXT("ABC"), kNpos, 3, 4},
+      {TEXT("ABCDE"), TEXT("DEF"), kNpos, 3, 2},
+
+      {TEXT("ABABABAB"), TEXT("AB"), kNpos, 2, kNpos},
+      {TEXT("ABABABAB"), TEXT("A"), kNpos, 1, 7},
+
+      {TEXT("A"), TEXT("A"), kNpos, 1, kNpos},
+      {TEXT("A"), TEXT("B"), kNpos, 1, 0},
+
+      {TEXT(""), TEXT("A"), kNpos, 1, kNpos},
+
+      {kBig1, TEXT("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), kNpos, 26, kNpos},
+      {kBig1, TEXT("ABC"), kNpos, 3, 51},
+      {kBig1, TEXT("XYZ"), kNpos, 3, 48},
+
+      {kBig2, TEXT("AEIOU"), kNpos, 5, 50},
+      {kBig2, TEXT("BCDFG"), kNpos, 5, 50},
+      {kBig2, TEXT("XYZ"), kNpos, 3, 49},
+
+      {kBig3, TEXT("0123456789"), kNpos, 10, kNpos},
+
+      {kBig3, TEXT("567890"), kNpos, 6, 43},
+
+      {kBig3, TEXT("123"), kNpos, 3, 49},
+
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAB"), TEXT("A"), kNpos, 1, 29},
+      {TEXT("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAB"), TEXT("B"), kNpos, 1, 28},
+
+      {TEXT("ABABABABABABABABAB"), TEXT("AB"), kNpos, 2, kNpos},
+      {TEXT("ABABABABABABABABAB"), TEXT("A"), kNpos, 1, 17},
+
+      {TEXT("EDGEEDGEEDGEEDGE"), TEXT("EDGE"), kNpos, 4, kNpos},
+  };
+
+  for (const auto& t : test_cases) {
+    String s(t.lhs);
+    const auto result = s.FindLastNotOf(t.set, t.pos, t.count);
+    CHECK_EQ(result, t.expected);
+  }
+}
