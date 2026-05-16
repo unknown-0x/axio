@@ -6,38 +6,17 @@
 #include <string>
 
 #include "../base/endianness.hpp"
+#include "../container/detail/allocator_holder.hpp"
 #include "../container/detail/iterator_traits.hpp"
 #include "../memory/allocator.hpp"
 #include "../utility/move.hpp"
 
 namespace axio {
-namespace internal {
-template <typename A, Bool = ShouldUseEBO<A>::value>
-struct AllocatorHolder : public A {
-  AllocatorHolder() noexcept(noexcept(A())) = default;
-  AllocatorHolder(const A& other) noexcept : A(other) {}
-
-  A& GetAlloc() noexcept { return *this; }
-  const A& GetAlloc() const noexcept { return *this; }
-};
-
-template <typename A>
-struct AllocatorHolder<A, false> {
-  A alloc;
-
-  AllocatorHolder() noexcept(noexcept(A())) = default;
-  AllocatorHolder(const A& other) : alloc(other) {}
-
-  A& GetAlloc() { return alloc; }
-  const A& GetAlloc() const { return alloc; }
-};
-}  // namespace internal
-
 template <typename T,
           typename Traits = std::char_traits<T>,
-          typename A = Allocator<T>>
-class BasicString : private internal::AllocatorHolder<A> {
-  using AllocatorHolder = internal::AllocatorHolder<A>;
+          typename A = axio::Allocator<T>>
+class BasicString : private detail::AllocatorHolder<A> {
+  using AllocatorHolder = detail::AllocatorHolder<A>;
   using AllocatorTraits = std::allocator_traits<A>;
 
   template <typename It>

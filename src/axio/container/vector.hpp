@@ -6,16 +6,20 @@
 #include <limits>
 #include <memory>
 
+#include "detail/allocator_holder.hpp"
 #include "detail/iterator_traits.hpp"
-#include "tuple.hpp"
 
 #include "../base/macros.hpp"
 #include "../base/type_traits.hpp"
 #include "../memory/allocator.hpp"
 
+#include "../utility/forward.hpp"
+#include "../utility/move.hpp"
+
 namespace axio {
 template <typename T, typename A = axio::Allocator<T>>
-class Vector {
+class Vector : private detail::AllocatorHolder<A> {
+  using AllocatorHolder = detail::AllocatorHolder<A>;
   using AllocatorTraits = std::allocator_traits<A>;
 
   template <typename It>
@@ -47,11 +51,14 @@ class Vector {
   Vector() noexcept(noexcept(AllocatorType())) : Vector(AllocatorType()) {}
 
   explicit Vector(const AllocatorType& allocator)
-      : storage_(allocator, nullptr), begin_(nullptr), end_(nullptr) {}
+      : AllocatorHolder(allocator),
+        begin_(nullptr),
+        end_(nullptr),
+        storage_end_(nullptr) {}
 
   explicit Vector(SizeType count,
                   const AllocatorType& allocator = AllocatorType())
-      : storage_(allocator, nullptr) {
+      : AllocatorHolder(allocator) {
     auto& alloc = Initialize(count);
     FillElements(alloc, begin_, end_);
   }
@@ -59,7 +66,7 @@ class Vector {
   Vector(SizeType count,
          ConstReference value,
          const AllocatorType& allocator = AllocatorType())
-      : storage_(allocator, nullptr) {
+      : AllocatorHolder(allocator) {
     auto& alloc = Initialize(count);
     FillElements(alloc, begin_, end_, value);
   }
@@ -68,7 +75,10 @@ class Vector {
   Vector(InputIt first,
          InputIt last,
          const AllocatorType& allocator = AllocatorType())
-      : storage_(allocator, nullptr), begin_(nullptr), end_(nullptr) {
+      : AllocatorHolder(allocator),
+        begin_(nullptr),
+        end_(nullptr),
+        storage_end_(nullptr) {
     while (first != last) {
       Push(*first++);
     }
@@ -78,7 +88,7 @@ class Vector {
   Vector(ForwardIt first,
          ForwardIt last,
          const AllocatorType& allocator = AllocatorType())
-      : storage_(allocator, nullptr) {
+      : AllocatorHolder(allocator) {
     const auto count = static_cast<SizeType>(std::distance(first, last));
     auto& alloc = Initialize(count);
     CopyElements(alloc, begin_, first, last);
@@ -86,44 +96,43 @@ class Vector {
 
   Vector(std::initializer_list<ValueType> values,
          const AllocatorType& allocator = AllocatorType())
-      : storage_(allocator, nullptr) {
+      : AllocatorHolder(allocator) {
     auto& alloc = Initialize(static_cast<SizeType>(values.size()));
     CopyElements(alloc, begin_, values.begin(), values.end());
   }
 
-  Vector(const Vector& other) : Vector(other, other.InternalAllocator()) {}
+  Vector(const Vector& other) : Vector(other, other.GetAlloc()) {}
 
   Vector(const Vector& other, const AllocatorType& allocator)
-      : storage_(allocator, nullptr) {
+      : AllocatorHolder(allocator) {
     auto& alloc = Initialize(other.Size());
     CopyElements(alloc, begin_, other.begin_, other.end_);
   }
 
   Vector(Vector&& other) noexcept
-      : storage_(Move(other.InternalAllocator()), other.GetEndOfStorage()),
+      : AllocatorHolder(Move(other.GetAlloc())),
         begin_(other.begin_),
-        end_(other.end_) {
+        end_(other.end_),
+        storage_end_(other.storage_end_) {
     other.begin_ = nullptr;
     other.end_ = nullptr;
-    other.GetEndOfStorage() = nullptr;
+    other.storage_end_ = nullptr;
   }
 
   Vector(Vector&& other, const AllocatorType& allocator)
-      : storage_(allocator, nullptr) {
+      : AllocatorHolder(allocator) {
     if (!other.begin_) {
       return;
     }
 
-    if (InternalAllocator() == other.InternalAllocator()) {
-      auto& other_end_of_storage = other.GetEndOfStorage();
-
+    if (this->GetAlloc() == other.GetAlloc()) {
       begin_ = other.begin_;
       end_ = other.end_;
-      GetEndOfStorage() = other_end_of_storage;
+      storage_end_ = other.storage_end_;
 
       other.begin_ = nullptr;
       other.end_ = nullptr;
-      other_end_of_storage = nullptr;
+      other.storage_end_ = nullptr;
       return;
     }
 
@@ -132,20 +141,19 @@ class Vector {
     other.Clear();
   }
 
-  ~Vector() { Release(InternalAllocator(), begin_, end_, GetEndOfStorage()); }
+  ~Vector() { Release(this->GetAlloc()); }
 
   Vector& operator=(const Vector& other) {
     if (AXIO_LIKELY(this != &other)) {
       if constexpr (AllocatorTraits::propagate_on_container_copy_assignment::
                         value) {
-        auto& allocator = InternalAllocator();
-        const auto& other_allocator = other.InternalAllocator();
+        auto& allocator = this->GetAlloc();
+        const auto& other_allocator = other.GetAlloc();
         if (allocator != other_allocator) {
-          Pointer& end_of_storage = GetEndOfStorage();
-          Release(allocator, begin_, end_, end_of_storage);
+          Release(allocator);
           begin_ = nullptr;
           end_ = nullptr;
-          end_of_storage = nullptr;
+          storage_end_ = nullptr;
           allocator = other_allocator;
         }
       }
@@ -158,21 +166,20 @@ class Vector {
       AllocatorTraits::propagate_on_container_move_assignment::value ||
       AllocatorTraits::is_always_equal::value) {
     if (AXIO_LIKELY(this != &other)) {
-      auto& allocator = InternalAllocator();
-      const auto& other_allocator = other.InternalAllocator();
-      constexpr bool can_propagate =
+      auto& allocator = this->GetAlloc();
+      const auto& other_allocator = other.GetAlloc();
+      static constexpr bool kCanPropagate =
           AllocatorTraits::propagate_on_container_move_assignment::value;
 
-      if (can_propagate || allocator == other_allocator) {
-        Pointer& end_of_storage = GetEndOfStorage();
-        Release(allocator, begin_, end_, end_of_storage);
-        if constexpr (can_propagate) {
+      if (kCanPropagate || allocator == other_allocator) {
+        Release(allocator);
+        if constexpr (kCanPropagate) {
           allocator = Move(other_allocator);
         }
         begin_ = other.begin_;
         end_ = other.end_;
-        end_of_storage = other.GetEndOfStorage();
-        other.begin_ = other.end_ = other.GetEndOfStorage() = nullptr;
+        storage_end_ = other.storage_end_;
+        other.begin_ = other.end_ = other.storage_end_ = nullptr;
       } else {
         Assign(std::make_move_iterator(other.begin_),
                std::make_move_iterator(other.end_));
@@ -189,7 +196,7 @@ class Vector {
 
   template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
   void Assign(InputIt first, InputIt last) {
-    Pointer beg = begin_;
+    auto beg = begin_;
     while (beg < end_ && first != last) {
       *beg++ = *first++;
     }
@@ -199,61 +206,56 @@ class Vector {
         Push(*first++);
       }
     } else {
-      DestroyElements(InternalAllocator(), beg, end_);
+      DestroyElements(this->GetAlloc(), beg, end_);
       end_ = beg;
     }
   }
 
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   void Assign(ForwardIt first, ForwardIt last) {
-    const SizeType count = static_cast<SizeType>(std::distance(first, last));
-    const SizeType old_size = Size();
-    if (AXIO_LIKELY(count > old_size)) {
-      Pointer old_end_of_storage = GetEndOfStorage();
-      const SizeType current_capacity =
-          static_cast<SizeType>(old_end_of_storage - begin_);
-      if (AXIO_LIKELY(count > current_capacity)) {
-        auto& allocator = InternalAllocator();
-        Pointer old_begin = Allocate(allocator, count);
-        CopyElements(allocator, begin_, first, last);
-        Release(allocator, old_begin, end_, old_end_of_storage);
-        end_ = begin_ + count;
+    const auto count = static_cast<SizeType>(std::distance(first, last));
+    const auto size = Size();
+    if (AXIO_LIKELY(count > size)) {
+      const auto capacity = static_cast<SizeType>(storage_end_ - begin_);
+      if (AXIO_LIKELY(count > capacity)) {
+        auto& allocator = this->GetAlloc();
+        auto new_begin = AllocatorTraits::allocate(allocator, count);
+        CopyElements(allocator, new_begin, first, last);
+        Release(allocator);
+        SetStorage(new_begin, count, count);
       } else {
         first = CopyAssignElements<true>(begin_, end_, first);
-        CopyElements(InternalAllocator(), end_, first, last);
+        CopyElements(this->GetAlloc(), end_, first, last);
         end_ = begin_ + count;
       }
     } else {
-      Pointer new_end = begin_ + count;
+      auto new_end = begin_ + count;
       CopyAssignElements<false>(begin_, new_end, first);
-      DestroyElements(InternalAllocator(), new_end, end_);
+      DestroyElements(this->GetAlloc(), new_end, end_);
       end_ = new_end;
     }
   }
 
   void Assign(SizeType count, ConstReference value) {
-    const SizeType old_size = Size();
-    if (AXIO_LIKELY(count > old_size)) {
-      Pointer old_end_of_storage = GetEndOfStorage();
-      const SizeType current_capacity =
-          static_cast<SizeType>(old_end_of_storage - begin_);
-      if (AXIO_LIKELY(count > current_capacity)) {
-        auto& allocator = InternalAllocator();
-        Pointer old_end = end_;
-        Pointer old_begin = Allocate(allocator, count);
-        end_ = begin_ + count;
-        FillElements(allocator, begin_, end_, value);
-        Release(allocator, old_begin, old_end, old_end_of_storage);
+    const auto size = Size();
+    if (AXIO_LIKELY(count > size)) {
+      const auto capacity = static_cast<SizeType>(storage_end_ - begin_);
+      if (AXIO_LIKELY(count > capacity)) {
+        auto& allocator = this->GetAlloc();
+        auto new_begin = AllocatorTraits::allocate(allocator, count);
+        FillElements(allocator, new_begin, new_begin + count, value);
+        Release(allocator);
+        SetStorage(new_begin, count, count);
       } else {
-        Pointer new_end = begin_ + count;
+        auto new_end = begin_ + count;
         FillAssignElements(begin_, end_, value);
-        FillElements(InternalAllocator(), end_, new_end, value);
+        FillElements(this->GetAlloc(), end_, new_end, value);
         end_ = new_end;
       }
     } else {
-      Pointer new_end = begin_ + count;
+      auto new_end = begin_ + count;
       FillAssignElements(begin_, new_end, value);
-      DestroyElements(InternalAllocator(), new_end, end_);
+      DestroyElements(this->GetAlloc(), new_end, end_);
       end_ = new_end;
     }
   }
@@ -264,7 +266,7 @@ class Vector {
 
   void Clear() {
     if (end_ > begin_) {
-      DestroyElements(InternalAllocator(), begin_, end_);
+      DestroyElements(this->GetAlloc(), begin_, end_);
       end_ = begin_;
     }
   }
@@ -282,12 +284,12 @@ class Vector {
   }
 
   void Shrink() {
-    if (GetEndOfStorage() > end_) {
+    if (storage_end_ > end_) {
       Reallocate(static_cast<SizeType>(end_ - begin_));
     }
   }
 
-  AllocatorType GetAllocator() const { return Get<0>(storage_); }
+  AllocatorType GetAllocator() const { return this->GetAlloc(); }
 
   Bool IsEmpty() const noexcept { return begin_ == end_; }
 
@@ -296,16 +298,16 @@ class Vector {
   }
 
   SizeType Capacity() const noexcept {
-    return static_cast<SizeType>(GetEndOfStorage() - begin_);
+    return static_cast<SizeType>(storage_end_ - begin_);
   }
 
   Pointer Data() noexcept { return begin_; }
   ConstPointer Data() const noexcept { return begin_; }
 
   SizeType MaxSize() const noexcept {
-    static constexpr auto kMaxSize =
+    static constexpr auto kMaxSz =
         std::numeric_limits<SizeType>::max() / sizeof(ValueType);
-    return std::min(kMaxSize, AllocatorTraits::max_size(InternalAllocator()));
+    return std::min(kMaxSz, AllocatorTraits::max_size(this->GetAlloc()));
   }
 
   Reference At(SizeType pos) {
@@ -381,20 +383,19 @@ class Vector {
 
   template <typename... ArgTypes>
   Reference Push(ArgTypes&&... args) {
-    Pointer end_of_storage = GetEndOfStorage();
-    if (end_ == end_of_storage) {
-      auto& allocator = InternalAllocator();
-      SizeType size = Size();
-      Pointer old_end = end_;
-      Pointer old_begin = Allocate(
-          allocator,
-          ComputeCapacity(static_cast<SizeType>(end_of_storage - begin_), 1));
-      end_ = begin_ + size;
-      AllocatorTraits::construct(allocator, end_, Forward<ArgTypes>(args)...);
-      MoveElements(allocator, begin_, old_begin, old_end);
-      Release(allocator, old_begin, old_end, end_of_storage);
+    if (end_ == storage_end_) {
+      auto& allocator = this->GetAlloc();
+      auto size = Size();
+      auto capacity =
+          ComputeCapacity(static_cast<SizeType>(storage_end_ - begin_), 1);
+      auto new_begin = AllocatorTraits::allocate(allocator, capacity);
+      AllocatorTraits::construct(allocator, new_begin + size,
+                                 Forward<ArgTypes>(args)...);
+      MoveElements(allocator, new_begin, begin_, end_);
+      Release(allocator);
+      SetStorage(new_begin, size, capacity);
     } else {
-      AllocatorTraits::construct(InternalAllocator(), end_,
+      AllocatorTraits::construct(this->GetAlloc(), end_,
                                  Forward<ArgTypes>(args)...);
     }
     return *(end_++);
@@ -409,22 +410,19 @@ class Vector {
 
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   void Append(ForwardIt first, ForwardIt last) {
-    const SizeType count = static_cast<SizeType>(std::distance(first, last));
-    Pointer end_of_storage = GetEndOfStorage();
-    if (end_ + count > end_of_storage) {
-      auto& allocator = InternalAllocator();
-      SizeType size = Size();
-      Pointer old_end = end_;
-      Pointer old_begin =
-          Allocate(allocator,
-                   ComputeCapacity(
-                       static_cast<SizeType>(end_of_storage - begin_), count));
-      end_ = begin_ + size;
-      CopyElements(allocator, end_, first, last);
-      MoveElements(allocator, begin_, old_begin, old_end);
-      Release(allocator, old_begin, old_end, end_of_storage);
+    const auto count = static_cast<SizeType>(std::distance(first, last));
+    if (end_ + count > storage_end_) {
+      auto& allocator = this->GetAlloc();
+      auto size = Size();
+      auto capacity =
+          ComputeCapacity(static_cast<SizeType>(storage_end_ - begin_), count);
+      auto new_begin = AllocatorTraits::allocate(allocator, capacity);
+      CopyElements(allocator, new_begin + size, first, last);
+      MoveElements(allocator, new_begin, begin_, end_);
+      Release(allocator);
+      SetStorage(new_begin, size, capacity);
     } else {
-      CopyElements(InternalAllocator(), end_, first, last);
+      CopyElements(this->GetAlloc(), end_, first, last);
     }
     end_ += count;
   }
@@ -434,21 +432,19 @@ class Vector {
   }
 
   void Append(SizeType count, ConstReference value) {
-    Pointer end_of_storage = GetEndOfStorage();
-    if (end_ + count > end_of_storage) {
-      auto& allocator = InternalAllocator();
-      SizeType size = Size();
-      Pointer old_end = end_;
-      Pointer old_begin =
-          Allocate(allocator,
-                   ComputeCapacity(
-                       static_cast<SizeType>(end_of_storage - begin_), count));
-      end_ = begin_ + size;
-      FillElements(allocator, end_, end_ + count, value);
-      MoveElements(allocator, begin_, old_begin, old_end);
-      Release(allocator, old_begin, old_end, end_of_storage);
+    if (end_ + count > storage_end_) {
+      auto& allocator = this->GetAlloc();
+      auto size = Size();
+      auto capacity =
+          ComputeCapacity(static_cast<SizeType>(storage_end_ - begin_), count);
+      auto new_begin = AllocatorTraits::allocate(allocator, capacity);
+      auto new_end = new_begin + size;
+      FillElements(allocator, new_end, new_end + count, value);
+      MoveElements(allocator, new_begin, begin_, end_);
+      Release(allocator);
+      SetStorage(new_begin, size, capacity);
     } else {
-      FillElements(InternalAllocator(), end_, end_ + count, value);
+      FillElements(this->GetAlloc(), end_, end_ + count, value);
     }
     end_ += count;
   }
@@ -457,7 +453,7 @@ class Vector {
     AXIO_ASSERT(pos >= begin_ && pos < end_);
     Iterator pos_it = begin_ + (pos - begin_);
     MoveAssignElements(pos_it, pos_it + 1, end_);
-    AllocatorTraits::destroy(InternalAllocator(), --end_);
+    AllocatorTraits::destroy(this->GetAlloc(), --end_);
     return pos_it;
   }
 
@@ -467,14 +463,14 @@ class Vector {
     Iterator pos_it = begin_ + (first - begin_);
     MoveAssignElements(pos_it, pos_it + count, end_);
     Pointer new_end = end_ - count;
-    DestroyElements(InternalAllocator(), new_end, end_);
+    DestroyElements(this->GetAlloc(), new_end, end_);
     end_ = new_end;
     return begin_ + (first - begin_);
   }
 
   void Pop() {
     AXIO_ASSERT(end_ != begin_);
-    AllocatorTraits::destroy(InternalAllocator(), --end_);
+    AllocatorTraits::destroy(this->GetAlloc(), --end_);
   }
 
   template <typename... ArgTypes>
@@ -486,22 +482,21 @@ class Vector {
       return end_ - 1;
     }
 
-    SizeType idx = static_cast<SizeType>(pos - begin_);
-    Iterator pos_it = begin_ + idx;
-    Pointer end_of_storage = GetEndOfStorage();
-    auto& allocator = InternalAllocator();
-    if (end_ == end_of_storage) {
-      Pointer old_end = end_;
-      Pointer old_begin = Allocate(
-          allocator,
-          ComputeCapacity(static_cast<SizeType>(end_of_storage - begin_), 1));
-      end_ = begin_ + (old_end - old_begin) + 1;
-      Iterator final_it = begin_ + idx;
+    auto& allocator = this->GetAlloc();
+    auto index = static_cast<SizeType>(pos - begin_);
+    auto pos_it = begin_ + index;
+    if (end_ == storage_end_) {
+      auto size = Size();
+      auto capacity =
+          ComputeCapacity(static_cast<SizeType>(storage_end_ - begin_), 1);
+      auto new_begin = AllocatorTraits::allocate(allocator, capacity);
+      auto final_it = new_begin + index;
       AllocatorTraits::construct(allocator, final_it,
                                  Forward<ArgTypes>(args)...);
-      MoveElements(allocator, begin_, old_begin, pos_it);
-      MoveElements(allocator, final_it + 1, pos_it, old_end);
-      Release(allocator, old_begin, old_end, end_of_storage);
+      MoveElements(allocator, new_begin, begin_, pos_it);
+      MoveElements(allocator, final_it + 1, pos_it, end_);
+      Release(allocator);
+      SetStorage(new_begin, size + 1, capacity);
       return final_it;
     } else {
       ValueType value(Forward<ArgTypes>(args)...);
@@ -523,32 +518,30 @@ class Vector {
       return end_ - count;
     }
 
-    SizeType idx = static_cast<SizeType>(pos - begin_);
-    Iterator pos_it = begin_ + idx;
-    Pointer end_of_storage = GetEndOfStorage();
-    auto& allocator = InternalAllocator();
-    if (end_ + count > end_of_storage) {
-      Pointer old_end = end_;
-      Pointer old_begin =
-          Allocate(allocator,
-                   ComputeCapacity(
-                       static_cast<SizeType>(end_of_storage - begin_), count));
-      end_ = begin_ + (old_end - old_begin) + count;
-      Iterator first = begin_ + idx;
-      Iterator last = first + count;
+    auto& allocator = this->GetAlloc();
+    auto index = static_cast<SizeType>(pos - begin_);
+    auto pos_it = begin_ + index;
+    if (end_ + count > storage_end_) {
+      auto size = Size();
+      auto capacity =
+          ComputeCapacity(static_cast<SizeType>(storage_end_ - begin_), count);
+      auto new_begin = AllocatorTraits::allocate(allocator, capacity);
+      auto first = new_begin + index;
+      auto last = first + count;
       FillElements(allocator, first, last, value);
-      MoveElements(allocator, begin_, old_begin, old_begin + idx);
-      MoveElements(allocator, last, old_begin + idx, old_end);
-      Release(allocator, old_begin, old_end, end_of_storage);
+      MoveElements(allocator, new_begin, begin_, begin_ + index);
+      MoveElements(allocator, last, begin_ + index, end_);
+      Release(allocator);
+      SetStorage(new_begin, size + count, capacity);
       return first;
     } else {
       const ValueType copy = value;
       const auto size = static_cast<SizeType>(end_ - begin_);
-      const auto insert_end = idx + count;
+      const auto insert_end = index + count;
       if (insert_end > size) {
-        auto dst = end_ + idx;
+        auto dst = end_ + index;
         MoveElements(allocator, dst, dst - size, end_);
-        FillAssignElements(pos_it, pos_it + (size - idx), copy);
+        FillAssignElements(pos_it, pos_it + (size - index), copy);
         FillElements(allocator, end_, dst, copy);
       } else {
         MoveElements(allocator, end_, end_ - count, end_);
@@ -584,24 +577,22 @@ class Vector {
       return begin_ + (pos - begin_);
     }
 
-    SizeType idx = static_cast<SizeType>(pos - begin_);
-    Iterator pos_it = begin_ + idx;
-    Pointer end_of_storage = GetEndOfStorage();
-    auto& allocator = InternalAllocator();
-    if (end_ + count > end_of_storage) {
-      Pointer old_end = end_;
-      Pointer old_begin =
-          Allocate(allocator,
-                   ComputeCapacity(
-                       static_cast<SizeType>(end_of_storage - begin_), count));
-      end_ = begin_ + (old_end - old_begin) + count;
-      auto dst = begin_ + idx;
-      auto old_pos = old_begin + idx;
-      CopyElements(allocator, dst, first, last);
-      MoveElements(allocator, begin_, old_begin, old_pos);
-      MoveElements(allocator, dst + count, old_pos, old_end);
-      Release(allocator, old_begin, old_end, end_of_storage);
-      return dst;
+    auto index = static_cast<SizeType>(pos - begin_);
+    auto pos_it = begin_ + index;
+    auto& allocator = this->GetAlloc();
+    if (end_ + count > storage_end_) {
+      auto size = Size();
+      auto capacity =
+          ComputeCapacity(static_cast<SizeType>(storage_end_ - begin_), count);
+      auto new_begin = AllocatorTraits::allocate(allocator, capacity);
+      auto dest = new_begin + index;
+      auto old_pos = begin_ + index;
+      CopyElements(allocator, dest, first, last);
+      MoveElements(allocator, new_begin, begin_, old_pos);
+      MoveElements(allocator, dest + count, old_pos, end_);
+      Release(allocator);
+      SetStorage(new_begin, size + count, capacity);
+      return dest;
     } else {
       const auto after_elems = static_cast<SizeType>(end_ - pos);
       auto old_end = end_;
@@ -648,44 +639,35 @@ class Vector {
     return AXIO_MAX(grown, required);
   }
 
-  static void Release(AllocatorType& allocator,
-                      Pointer old_begin,
-                      Pointer old_end,
-                      Pointer old_end_of_storage) {
-    if (!old_begin) {
+  void Release(AllocatorType& allocator) {
+    if (!begin_) {
       return;
     }
-    if (old_begin != old_end) {
-      DestroyElements(allocator, old_begin, old_end);
+    if (begin_ != end_) {
+      DestroyElements(allocator, begin_, end_);
     }
-    AllocatorTraits::deallocate(
-        allocator, old_begin,
-        static_cast<SizeType>(old_end_of_storage - old_begin));
+    AllocatorTraits::deallocate(allocator, begin_,
+                                static_cast<SizeType>(storage_end_ - begin_));
   }
 
-  Pointer Allocate(AllocatorType& allocator, SizeType capacity) {
-    Pointer old_begin = begin_;
-    begin_ = AllocatorTraits::allocate(allocator, capacity);
-    GetEndOfStorage() = begin_ + capacity;
-    return old_begin;
+  void SetStorage(Pointer new_begin, SizeType new_size, SizeType new_capacity) {
+    begin_ = new_begin;
+    end_ = begin_ + new_size;
+    storage_end_ = begin_ + new_capacity;
   }
 
-  void Reallocate(SizeType new_capacity) {
-    auto& allocator = InternalAllocator();
-    Pointer old_end_of_storage = GetEndOfStorage();
-    Pointer old_begin = Allocate(allocator, new_capacity);
-    Pointer old_end = end_;
-    SizeType size = static_cast<SizeType>(old_end - old_begin);
-    MoveElements(allocator, begin_, old_begin, old_end);
-    Release(allocator, old_begin, old_end, old_end_of_storage);
-    end_ = begin_ + size;
+  void Reallocate(SizeType capacity) {
+    auto& allocator = this->GetAlloc();
+    auto new_begin = AllocatorTraits::allocate(allocator, capacity);
+    auto size = static_cast<SizeType>(end_ - begin_);
+    MoveElements(allocator, new_begin, begin_, end_);
+    Release(allocator);
+    SetStorage(new_begin, size, capacity);
   }
 
   AllocatorType& Initialize(SizeType count) {
-    auto& allocator = InternalAllocator();
-    begin_ = AllocatorTraits::allocate(allocator, count);
-    end_ = begin_ + count;
-    GetEndOfStorage() = end_;
+    auto& allocator = this->GetAlloc();
+    SetStorage(AllocatorTraits::allocate(allocator, count), count, count);
     return allocator;
   }
 
@@ -700,22 +682,15 @@ class Vector {
       if (new_size > Capacity()) {
         Reallocate(new_size);
       }
-      Pointer new_end = begin_ + new_size;
-      FillElements(InternalAllocator(), end_, new_end,
-                   Forward<ArgTypes>(args)...);
+      auto new_end = begin_ + new_size;
+      FillElements(this->GetAlloc(), end_, new_end, Forward<ArgTypes>(args)...);
       end_ = new_end;
     } else {
-      Pointer new_end = begin_ + new_size;
-      DestroyElements(InternalAllocator(), new_end, end_);
+      auto new_end = begin_ + new_size;
+      DestroyElements(this->GetAlloc(), new_end, end_);
       end_ = new_end;
     }
   }
-
-  Pointer& GetEndOfStorage() { return Get<1>(storage_); }
-  const Pointer& GetEndOfStorage() const { return Get<1>(storage_); }
-
-  AllocatorType& InternalAllocator() { return Get<0>(storage_); }
-  const AllocatorType& InternalAllocator() const { return Get<0>(storage_); }
 
   static void DestroyElements(AllocatorType& allocator,
                               Pointer first,
@@ -903,9 +878,9 @@ class Vector {
     }
   }
 
-  Tuple<AllocatorType, Pointer /* end of storage */> storage_;
   Pointer begin_;
   Pointer end_;
+  Pointer storage_end_;
 };
 
 template <typename T, typename A>
