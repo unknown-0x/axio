@@ -3,6 +3,7 @@
 
 #include "detail/tuple_fwd.hpp"
 
+#include "../string/axio_repr.hpp"
 #include "../utility/forward.hpp"
 #include "../utility/move.hpp"
 
@@ -524,6 +525,34 @@ constexpr Bool operator>=(const Tuple<Ts...>& lhs,
                           const Tuple<Us...>& rhs) noexcept(noexcept(lhs <
                                                                      rhs)) {
   return !(lhs < rhs);
+}
+
+template <typename Output>
+void AxioRepr(Output& output, Tuple<>) {
+  output.Append("()", 2);
+}
+
+template <typename Output, typename T>
+void AxioRepr(Output& output, const Tuple<T>& tuple) {
+  AppendToOutput(output, '(', Get<0>(tuple), ')');
+}
+
+namespace internal {
+template <typename Output, typename... Ts, SizeT... Is>
+void AppendSequence(Output& output,
+                    const Tuple<Ts...>& tuple,
+                    std::index_sequence<Is...>) {
+  (AppendToOutput(output, Get<Is>(tuple), ", "), ...);
+}
+}  // namespace internal
+
+template <typename Output, typename... Ts>
+void AxioRepr(Output& output, const Tuple<Ts...>& tuple) {
+  static constexpr auto kTupleSize = TupleSize<Tuple<Ts...>>::value;
+  output.Append('(');
+  internal::AppendSequence(output, tuple,
+                           std::make_index_sequence<kTupleSize - 1>{});
+  AppendToOutput(output, Get<kTupleSize - 1>(tuple), ')');
 }
 }  // namespace axio
 

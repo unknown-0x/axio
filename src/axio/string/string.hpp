@@ -1634,8 +1634,8 @@ class BasicString : private detail::AllocatorHolder<A> {
     if (add_size > remaining) {
       throw std::length_error("BasicString capacity overflow");
     }
-    auto required = old_capacity + add_size;
-    auto new_capacity = old_capacity * kGrowthFactor;
+    const auto required = old_capacity + add_size;
+    const auto new_capacity = old_capacity * kGrowthFactor;
     return AXIO_MAX(required, new_capacity);
   }
 
@@ -1770,6 +1770,11 @@ using U8String = BasicString<char8_t>;
 #endif
 using U16String = BasicString<char16_t>;
 using U32String = BasicString<char32_t>;
+
+template <typename Output, typename Traits, typename A>
+void AxioRepr(Output& out, const BasicString<char, Traits, A>& other) {
+  out.Append(other.Data(), other.Size());
+}
 }  // namespace axio
 
 #endif

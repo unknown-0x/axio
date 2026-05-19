@@ -16,6 +16,8 @@
 #include "../utility/forward.hpp"
 #include "../utility/move.hpp"
 
+#include "../string/axio_repr.hpp"
+
 namespace axio {
 template <typename T, typename A = axio::Allocator<T>>
 class Vector : private detail::AllocatorHolder<A> {
@@ -913,6 +915,22 @@ Bool operator>(const Vector<T, A>& lhs, const Vector<T, A>& rhs) {
 template <typename T, typename A>
 Bool operator>=(const Vector<T, A>& lhs, const Vector<T, A>& rhs) {
   return !(lhs < rhs);
+}
+
+template <typename Output, typename T, typename A>
+void AxioRepr(Output& output, const Vector<T, A>& vector) {
+  using SizeType = typename Vector<T, A>::SizeType;
+  const auto size = vector.Size();
+  if (size == 0) {
+    output.Append("[]", 2);
+    return;
+  }
+  output.Append('[');
+  SizeType i = 0;
+  for (const auto n = size - 1; i < n; ++i) {
+    AppendToOutput(output, vector[i], ", ");
+  }
+  AppendToOutput(output, vector[i], ']');
 }
 }  // namespace axio
 

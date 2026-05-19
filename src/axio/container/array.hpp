@@ -6,6 +6,7 @@
 
 #include "../base/macros.hpp"
 #include "../base/types.hpp"
+#include "../string/axio_repr.hpp"
 #include "../utility/move.hpp"
 
 #include "detail/tuple_fwd.hpp"
@@ -234,6 +235,32 @@ template <SizeT I, typename T, SizeT N>
 constexpr decltype(auto) Get(const Array<T, N>&& arr) noexcept {
   static_assert(I < N, "Index exceeds array size");
   return Move(arr.values[I]);
+}
+
+template <typename Output, typename T>
+void AxioRepr(Output& output, Array<T, 0>) {
+  output.Append("[]", 2);
+}
+
+template <typename Output, typename T>
+void AxioRepr(Output& output, const Array<T, 1>& a) {
+  AppendToOutput(output, '[', a[0], ']');
+}
+
+namespace internal {
+template <typename Output, typename T, SizeT N, SizeT... Is>
+void AppendSequence(Output& output,
+                    const Array<T, N>& a,
+                    std::index_sequence<Is...>) {
+  (AppendToOutput(output, a[Is], ", "), ...);
+}
+}  // namespace internal
+
+template <typename Output, typename T, SizeT N>
+void AxioRepr(Output& output, const Array<T, N>& a) {
+  output.Append('[');
+  internal::AppendSequence(output, a, std::make_index_sequence<N - 1>{});
+  AppendToOutput(output, a[N - 1], ']');
 }
 }  // namespace axio
 
