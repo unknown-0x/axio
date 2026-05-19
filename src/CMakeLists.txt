@@ -1,5 +1,6 @@
 add_library(
     axio 
+
     axio/axio.cpp
     axio/base/arch.hpp
     axio/base/compiler.hpp
@@ -8,14 +9,22 @@ add_library(
     axio/base/os.hpp
     axio/base/type_traits.hpp
     axio/base/types.hpp
+
+    axio/container/detail/iterator_traits.hpp
+    axio/container/detail/tuple_fwd.hpp
     axio/container/array.hpp
     axio/container/tuple.hpp
     axio/container/vector.hpp
-    axio/container/detail/iterator_traits.hpp
-    axio/container/detail/tuple_fwd.hpp
+
     axio/memory/allocator.hpp
+
+    axio/string/internal/buffer.hpp
+    axio/string/internal/number_conversion.hpp
     axio/string/char_traits.hpp
+    axio/string/axio_repr.hpp
     axio/string/string.hpp
+    axio/string/string_utils.hpp
+
     axio/utility/forward.hpp
     axio/utility/move.hpp
 )
