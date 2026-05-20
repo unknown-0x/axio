@@ -69,10 +69,20 @@ inline constexpr I kScaledConstant = I(10 * (I(1) << a) / b + 1);
 template <typename Integer>
 char* WriteIntegerToBuffer(char* out, Integer value) {
   using UInt = axio::T<MakeUnsigned<Integer>>;
+  
   // convert bool to int before test with unary + to silence warning if T
   // happens to be bool
-  const auto n =
-      static_cast<UInt>(value < 0 ? (*out++ = '-', 0 - value) : value);
+  UInt n;
+  if constexpr (IsSigned<Integer>::value) {
+    if (value < 0) {
+      *out++ = '-';
+      n = UInt(0) - static_cast<UInt>(value);
+    } else {
+      n = static_cast<UInt>(value);
+    }
+  } else {
+    n = value;
+  }
 
   if (n < 100) {
     WRITE_2(out, kDigits.fd[n]);
