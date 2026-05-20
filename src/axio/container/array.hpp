@@ -258,7 +258,7 @@ void AppendSequence(Output& output,
 
 template <typename Output, typename T, SizeT N>
 void AxioRepr(Output& output, const Array<T, N>& a) {
-  output.Append('[');
+  output.Append(1, '[');
   internal::AppendSequence(output, a, std::make_index_sequence<N - 1>{});
   AppendToOutput(output, a[N - 1], ']');
 }

@@ -925,7 +925,7 @@ void AxioRepr(Output& output, const Vector<T, A>& vector) {
     output.Append("[]", 2);
     return;
   }
-  output.Append('[');
+  output.Append(1, '[');
   SizeType i = 0;
   for (const auto n = size - 1; i < n; ++i) {
     AppendToOutput(output, vector[i], ", ");

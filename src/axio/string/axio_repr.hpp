@@ -57,7 +57,7 @@ void AxioRepr(Output& out, T s) {
 
 template <typename Output>
 void AxioRepr(Output& out, char c) {
-  out.Append(c);
+  out.Append(1, c);
 }
 
 template <typename Output, typename... Ts>

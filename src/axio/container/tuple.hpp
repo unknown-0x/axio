@@ -549,7 +549,7 @@ void AppendSequence(Output& output,
 template <typename Output, typename... Ts>
 void AxioRepr(Output& output, const Tuple<Ts...>& tuple) {
   static constexpr auto kTupleSize = TupleSize<Tuple<Ts...>>::value;
-  output.Append('(');
+  output.Append(1, '(');
   internal::AppendSequence(output, tuple,
                            std::make_index_sequence<kTupleSize - 1>{});
   AppendToOutput(output, Get<kTupleSize - 1>(tuple), ')');
