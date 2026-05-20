@@ -18,8 +18,8 @@ add_library(
 
     axio/memory/allocator.hpp
 
-    axio/string/internal/buffer.hpp
     axio/string/internal/number_conversion.hpp
+    axio/string/buffer.hpp
     axio/string/char_traits.hpp
     axio/string/axio_repr.hpp
     axio/string/string.hpp
