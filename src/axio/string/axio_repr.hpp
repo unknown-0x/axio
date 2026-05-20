@@ -16,15 +16,13 @@ namespace axio {
     out.Append(buffer, static_cast<SizeT>(end - buffer));           \
   }
 
-MAKE_AXIO_REPR_FOR_INTEGER(Int8);
-MAKE_AXIO_REPR_FOR_INTEGER(Int16);
-MAKE_AXIO_REPR_FOR_INTEGER(Int32);
-MAKE_AXIO_REPR_FOR_INTEGER(Int64);
+MAKE_AXIO_REPR_FOR_INTEGER(int);
+MAKE_AXIO_REPR_FOR_INTEGER(long);
+MAKE_AXIO_REPR_FOR_INTEGER(long long);
 
-MAKE_AXIO_REPR_FOR_INTEGER(UInt8);
-MAKE_AXIO_REPR_FOR_INTEGER(UInt16);
-MAKE_AXIO_REPR_FOR_INTEGER(UInt32);
-MAKE_AXIO_REPR_FOR_INTEGER(UInt64);
+MAKE_AXIO_REPR_FOR_INTEGER(unsigned);
+MAKE_AXIO_REPR_FOR_INTEGER(unsigned long);
+MAKE_AXIO_REPR_FOR_INTEGER(unsigned long long);
 
 template <typename Output>
 void AxioRepr(Output& out, Bool b) {
