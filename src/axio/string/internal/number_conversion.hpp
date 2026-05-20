@@ -20,7 +20,7 @@ static constexpr SizeT kIntToStringBufferSize =
 
 struct CharPair {
   char v[2];
-  constexpr CharPair(char c) : v{c, char()} {}
+  constexpr CharPair(char c) : v{c, '\0'} {}
   constexpr CharPair(int n) : v{"0123456789"[n / 10], "0123456789"[n % 10]} {}
 };
 
@@ -51,9 +51,6 @@ constexpr UInt64 kMask57 = (UInt64(1) << 57) - 1;
 template <typename I, I a, I b>
 inline constexpr I kScaledConstant = I(10 * (I(1) << a) / b + 1);
 
-template <Bool b, typename T, typename F>
-using Cond = axio::T<Conditional<b, T, F>>;
-
 #define WRITE_2(dst, src) std::memcpy(dst, &src, 2)
 
 #define WRITE_2_MASKED(v, mask, dst, src)   \
@@ -61,20 +58,17 @@ using Cond = axio::T<Conditional<b, T, F>>;
   WRITE_2(dst, src[v >> mask])
 
 #define WRITE_2_MASKED_3(v, mask, dst, src) \
+  WRITE_2_MASKED(v, mask, dst, src);        \
   WRITE_2_MASKED(v, mask, dst + 2, src);    \
-  WRITE_2_MASKED(v, mask, dst + 4, src);    \
-  WRITE_2_MASKED(v, mask, dst + 6, src)
+  WRITE_2_MASKED(v, mask, dst + 4, src)
 
 #define WRITE_2_MASKED_4(v, mask, dst, src) \
   WRITE_2_MASKED_3(v, mask, dst, src);      \
-  WRITE_2_MASKED(v, mask, dst + 8, src)
+  WRITE_2_MASKED(v, mask, dst + 6, src)
 
 template <typename Integer>
 char* WriteIntegerToBuffer(char* out, Integer value) {
-  static constexpr auto kSize = sizeof(Integer);
-  using UInt = Cond<kSize == 1, unsigned char,
-                    Cond<kSize <= sizeof(short), unsigned short,
-                         Cond<kSize <= sizeof(UInt32), UInt32, UInt64>>>;
+  using UInt = axio::T<MakeUnsigned<Integer>>;
   // convert bool to int before test with unary + to silence warning if T
   // happens to be bool
   const auto n =
@@ -88,16 +82,16 @@ char* WriteIntegerToBuffer(char* out, Integer value) {
     if (n < 10'000) {
       auto v = kScaledConstant<UInt32, 24, 1000> * n;
       WRITE_2(out, kDigits.fd[v >> 24]);
-      out -= n < 1000;
-      WRITE_2_MASKED(v, 24, out + 2, kDigits.dd);
-      return out + 4;
+      out += 2 - (n < 1000);
+      WRITE_2_MASKED(v, 24, out, kDigits.dd);
+      return out + 2;
     }
     auto v = kScaledConstant<UInt64, 32ull, 100000ull> * n;
     WRITE_2(out, kDigits.fd[v >> 32]);
-    out -= n < 100000;
+    out += 2 - (n < 100000);
+    WRITE_2_MASKED(v, 32, out, kDigits.dd);
     WRITE_2_MASKED(v, 32, out + 2, kDigits.dd);
-    WRITE_2_MASKED(v, 32, out + 4, kDigits.dd);
-    return out + 6;
+    return out + 4;
   }
 
   static constexpr UInt64 kMul_48_1e6 = (1ull << 48ull) / 1'000'000 + 1;
@@ -106,16 +100,15 @@ char* WriteIntegerToBuffer(char* out, Integer value) {
     if (n < 100'000'000) {
       auto v = kScaledConstant<UInt64, 48ull, 10'000'000> * n >> 16;
       WRITE_2(out, kDigits.fd[v >> 32]);
-      out -= n < 10'000'000;
+      out += 2 - (n < 10'000'000);
       WRITE_2_MASKED_3(v, 32, out, kDigits.dd);
-      return out + 8;
+      return out + 6;
     }
     auto v = kScaledConstant<UInt64, 57ull, 1'000'000'000> * n;
     WRITE_2(out, kDigits.fd[v >> 57]);
-    out -= n < 1'000'000'000;
-
+    out += 2 - (n < 1'000'000'000);
     WRITE_2_MASKED_4(v, 57, out, kDigits.dd);
-    return out + 10;
+    return out + 8;
   }
 
   auto z = static_cast<UInt32>(n % 100'000'000);
@@ -128,29 +121,29 @@ char* WriteIntegerToBuffer(char* out, Integer value) {
     if (u < 10000) {
       auto v = kScaledConstant<UInt32, 24, 1000> * u;
       WRITE_2(out, kDigits.fd[v >> 24]);
-      out -= u < 1000;
-      WRITE_2_MASKED(v, 24, out + 2, kDigits.dd);
-      out += 4;
+      out += 2 - (u < 1000);
+      WRITE_2_MASKED(v, 24, out, kDigits.dd);
+      out += 2;
     } else {
       auto v = kScaledConstant<UInt64, 32ull, 100'000> * u;
       WRITE_2(out, kDigits.fd[v >> 32]);
-      out -= u < 100'000;
+      out += 2 - (u < 100'000);
+      WRITE_2_MASKED(v, 32, out, kDigits.dd);
       WRITE_2_MASKED(v, 32, out + 2, kDigits.dd);
-      WRITE_2_MASKED(v, 32, out + 4, kDigits.dd);
-      out += 6;
+      out += 4;
     }
   } else if (u < 100'000'000) {
     auto v = kScaledConstant<UInt64, 48ull, 10'000'000> * u >> 16;
     WRITE_2(out, kDigits.fd[v >> 32]);
-    out -= u < 10'000'000;
+    out += 2 - (u < 10'000'000);
     WRITE_2_MASKED_3(v, 32, out, kDigits.dd);
-    out += 8;
+    out += 6;
   } else if (u < kPow2_32) {
     auto v = kScaledConstant<UInt64, 57ull, 1'000'000'000> * u;
     WRITE_2(out, kDigits.fd[v >> 57]);
-    out -= u < 1'000'000'000;
+    out += 2 - (u < 1'000'000'000);
     WRITE_2_MASKED_4(v, 57, out, kDigits.dd);
-    out += 10;
+    out += 8;
   } else {
     UInt32 y = static_cast<UInt32>(u % 100'000'000);
     u /= 100'000'000;
@@ -162,21 +155,21 @@ char* WriteIntegerToBuffer(char* out, Integer value) {
     } else {
       auto v = kScaledConstant<UInt32, 24, 1'000> * u;
       WRITE_2(out, kDigits.fd[v >> 24]);
-      out -= u < 1'000;
-      WRITE_2_MASKED(v, 24, out + 2, kDigits.dd);
-      out += 4;
+      out += 2 - (u < 1'000);
+      WRITE_2_MASKED(v, 24, out, kDigits.dd);
+      out += 2;
     }
 
     // do 8 digits
     auto v = (kMul_48_1e6 * y >> 16) + 1;
     WRITE_2(out, kDigits.dd[v >> 32]);
-    WRITE_2_MASKED_3(v, 32, out, kDigits.dd);
+    WRITE_2_MASKED_3(v, 32, out + 2, kDigits.dd);
     out += 8;
   }
   // do 8 digits
   auto v = (kMul_48_1e6 * z >> 16) + 1;
   WRITE_2(out, kDigits.dd[v >> 32]);
-  WRITE_2_MASKED_3(v, 32, out, kDigits.dd);
+  WRITE_2_MASKED_3(v, 32, out + 2, kDigits.dd);
   return out + 8;
 }
 
