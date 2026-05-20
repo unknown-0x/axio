@@ -5,7 +5,11 @@
 #include <axio/container/vector.hpp>
 #include <axio/string/string_utils.hpp>
 
+#include <list>
+#include <map>
+
 struct Point {
+  Point() = default;
   Point(int xv, int yv) : x(xv), y(yv) {}
 
   int x;
@@ -213,4 +217,73 @@ TEST_CASE(StringUtils, StringAppend) {
     axio::StringAppend(s, a2, a3);
     CHECK_EQ(s, "[][1, 2, 3][aaa, bbb, ccc][Foo]");
   }
+}
+
+TEST_CASE(StringUtils, StringJoin) {
+  axio::Vector<int> empty = {};
+  axio::Vector<int> one = {1};
+  axio::Vector<int> nums = {1, 2, 3, 4, 5};
+
+  auto s1 = axio::StringJoin(empty, " | ");
+  auto s2 = axio::StringJoin(one, " | ");
+  auto s3 = axio::StringJoin(nums, " | ");
+  CHECK_EQ(s1, "");
+  CHECK_EQ(s2, "1");
+  CHECK_EQ(s3, "1 | 2 | 3 | 4 | 5");
+
+  axio::Tuple<> t1;
+  axio::Tuple<int> t2{1};
+  axio::Tuple<int, axio::String, axio::Vector<int>> t3{
+      1, "string", {1, 2, 3, 4}};
+
+  s1 = axio::StringJoin(t1, " ! ");
+  s2 = axio::StringJoin(t2, " $ ");
+  s3 = axio::StringJoin(t3, " & ");
+  CHECK_EQ(s1, "");
+  CHECK_EQ(s2, "1");
+  CHECK_EQ(s3, "1 & string & [1, 2, 3, 4]");
+
+  std::list<foo::Foo> l{{}, {}, {}, {}};
+  s1 = axio::StringJoin(l, "/");
+  CHECK_EQ(s1, "Foo/Foo/Foo/Foo");
+
+  std::vector<Point> points{{1, 2}, {3, 4}, {5, 6}};
+  s1 = axio::StringJoin(points, " | ",
+                        [](axio::Buffer<>& buffer, const Point& p) {
+                          axio::AppendToOutput(buffer, '{', p.x, ',', p.y, '}');
+                        });
+  CHECK_EQ(s1, "{1,2} | {3,4} | {5,6}");
+
+  std::map<int, Point> point_map;
+  point_map[100] = Point{1, 0};
+  point_map[110] = Point{1, 1};
+  point_map[120] = Point{1, 2};
+  point_map[200] = Point{2, 0};
+  point_map[230] = Point{2, 3};
+
+  s1 = axio::StringJoin(
+      point_map, " @ ",
+      [](axio::Buffer<>& buffer, const std::pair<int, Point>& p) {
+        axio::AppendToOutput(buffer, p.first, '{', p.second.x, ',', p.second.y,
+                             '}');
+      });
+  CHECK_EQ(s1, "100{1,0} @ 110{1,1} @ 120{1,2} @ 200{2,0} @ 230{2,3}");
+}
+
+TEST_CASE(StringUtils, StringJoinValues) {
+  IGNORE_RESULT();
+
+  axio::Vector<foo::Foo> empty{};
+  axio::Vector<foo::Foo> v{{}, {}, {}};
+  axio::Tuple<int, axio::String, Point> t{1, "hello", {1, 2}};
+
+  auto s1 = axio::StringJoinValues(",");
+  auto s2 = axio::StringJoinValues(",", 1);
+  auto s3 = axio::StringJoinValues(",", empty, t);
+  CHECK_EQ(s1, "");
+  CHECK_EQ(s2, "1");
+  CHECK_EQ(s3, "[],(1, hello, (x=1, y=2))");
+
+  auto s4 = axio::StringJoinValues(" ~ ", s3, v, 1, 2, 3);
+  CHECK_EQ(s4, "[],(1, hello, (x=1, y=2)) ~ [Foo, Foo, Foo] ~ 1 ~ 2 ~ 3");
 }

@@ -54,11 +54,8 @@ axio_test(
 )
 
 axio_test(
-    number_conversion_test
-    string/number_conversion.cpp
-)
-
-axio_test(
     string_utils_test
+    string/axio_repr.cpp
     string/string_utils.cpp
+    string/number_conversion.cpp
 )
