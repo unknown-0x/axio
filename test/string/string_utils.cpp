@@ -271,8 +271,6 @@ TEST_CASE(StringUtils, StringJoin) {
 }
 
 TEST_CASE(StringUtils, StringJoinValues) {
-  IGNORE_RESULT();
-
   axio::Vector<foo::Foo> empty{};
   axio::Vector<foo::Foo> v{{}, {}, {}};
   axio::Tuple<int, axio::String, Point> t{1, "hello", {1, 2}};
@@ -286,4 +284,179 @@ TEST_CASE(StringUtils, StringJoinValues) {
 
   auto s4 = axio::StringJoinValues(" ~ ", s3, v, 1, 2, 3);
   CHECK_EQ(s4, "[],(1, hello, (x=1, y=2)) ~ [Foo, Foo, Foo] ~ 1 ~ 2 ~ 3");
+}
+
+namespace {
+template <typename T, typename A, typename U>
+axio::Bool Expect(const axio::Vector<T, A>& v, std::initializer_list<U> l) {
+  if (v.Size() != l.size()) {
+    return false;
+  }
+  auto vb = v.begin();
+  auto ve = v.end();
+  auto lb = l.begin();
+  for (; vb != ve; ++vb, ++lb) {
+    if (!(*vb == *lb)) {
+      return false;
+    }
+  }
+  return true;
+}
+}  // namespace
+
+#define CHECK_VECTOR(v, ...) CHECK_TRUE(Expect(v, __VA_ARGS__))
+
+TEST_CASE(StringUtils, SplitByChar) {
+  using ViewVector = axio::Vector<std::string_view>;
+
+  auto s1 = axio::Split("", ',');
+  auto s2 = axio::Split("11", ',');
+  auto s3 = axio::Split("11,", ',');
+  auto s4 = axio::Split("aa,bb,cc", ',');
+  auto s5 = axio::Split("aa,,bb,cc,dd,ee, ,ff,", ',');
+  auto s6 = axio::Split(",", ',');
+  auto s7 = axio::Split(",,", ',');
+
+  ViewVector v1(s1.begin(), s1.end());
+  ViewVector v2(s2.begin(), s2.end());
+  ViewVector v3(s3.begin(), s3.end());
+  ViewVector v4(s4.begin(), s4.end());
+  ViewVector v5(s5.begin(), s5.end());
+  ViewVector v6(s6.begin(), s6.end());
+  ViewVector v7(s7.begin(), s7.end());
+
+  CHECK_VECTOR(v1, {""});
+  CHECK_VECTOR(v2, {"11"});
+  CHECK_VECTOR(v3, {"11", ""});
+  CHECK_VECTOR(v4, {"aa", "bb", "cc"});
+  CHECK_VECTOR(v5, {"aa", "", "bb", "cc", "dd", "ee", " ", "ff", ""});
+  CHECK_VECTOR(v6, {"", ""});
+  CHECK_VECTOR(v7, {"", "", ""});
+}
+
+TEST_CASE(StringUtils, SplitByString) {
+  using ViewVector = axio::Vector<std::string_view>;
+
+  auto s1 = axio::Split("", "@@@");
+  auto s2 = axio::Split("11", "abc");
+  auto s3 = axio::Split("abc@@@", "@@@");
+  auto s4 = axio::Split("aa@@@bb@@@cc", "@@@");
+  auto s5 = axio::Split("aa@@@@@@bb@@@cc@@@dd@@@ee@@@ @@@ff@@@", "@@@");
+  auto s6 = axio::Split("@@@", "@@@");
+  auto s7 = axio::Split("abcabcabc", "abc");
+
+  ViewVector v1(s1.begin(), s1.end());
+  ViewVector v2(s2.begin(), s2.end());
+  ViewVector v3(s3.begin(), s3.end());
+  ViewVector v4(s4.begin(), s4.end());
+  ViewVector v5(s5.begin(), s5.end());
+  ViewVector v6(s6.begin(), s6.end());
+  ViewVector v7(s7.begin(), s7.end());
+
+  CHECK_VECTOR(v1, {""});
+  CHECK_VECTOR(v2, {"11"});
+  CHECK_VECTOR(v3, {"abc", ""});
+  CHECK_VECTOR(v4, {"aa", "bb", "cc"});
+  CHECK_VECTOR(v5, {"aa", "", "bb", "cc", "dd", "ee", " ", "ff", ""});
+  CHECK_VECTOR(v6, {"", ""});
+  CHECK_VECTOR(v7, {"", "", "", ""});
+
+  const char* arr[]{"", "aa", "bb", "cc", "", "dd", ""};
+  axio::SizeT i = 0;
+  for (auto x : axio::Split(",aa,bb,cc,,dd,", ',')) {
+    CHECK_EQ(x, arr[i++]);
+  }
+}
+
+TEST_CASE(StringUtils, SplitByAnyChar) {
+  using ViewVector = axio::Vector<std::string_view>;
+
+  axio::AnyCharDelimiter any_delim{",;|"};
+  axio::AnyCharDelimiter dup_delim{",,"};
+
+  auto t1 = axio::Split("", any_delim);
+  auto t2 = axio::Split("abc", any_delim);
+  auto t3 = axio::Split("aa,bb;cc|dd", any_delim);
+  auto t4 = axio::Split(",,;;||", any_delim);
+  auto t5 = axio::Split("aa,;bb", any_delim);
+  auto t6 = axio::Split(",aa;", any_delim);
+  auto t7 = axio::Split("aa,bb", dup_delim);
+
+  ViewVector v1(t1.begin(), t1.end());
+  ViewVector v2(t2.begin(), t2.end());
+  ViewVector v3(t3.begin(), t3.end());
+  ViewVector v4(t4.begin(), t4.end());
+  ViewVector v5(t5.begin(), t5.end());
+  ViewVector v6(t6.begin(), t6.end());
+  ViewVector v7(t7.begin(), t7.end());
+
+  CHECK_VECTOR(v1, {""});
+  CHECK_VECTOR(v2, {"abc"});
+  CHECK_VECTOR(v3, {"aa", "bb", "cc", "dd"});
+  CHECK_VECTOR(v4, {"", "", "", "", "", "", ""});
+  CHECK_VECTOR(v5, {"aa", "", "bb"});
+  CHECK_VECTOR(v6, {"", "aa", ""});
+  CHECK_VECTOR(v7, {"aa", "bb"});
+
+  std::list<std::string_view> l(t3.begin(), t3.end());
+  auto b = l.begin();
+  for (axio::SizeT i = 0; i < l.size(); ++i) {
+    CHECK_EQ(v3[i], *b);
+    ++b;
+  }
+}
+
+TEST_CASE(StringUtils, Split) {
+  {
+    auto view1 = axio::Split("a  ,   b,   , c,  d ,", ',') | axio::Trim;
+    auto view2 = axio::Split("a  ,   b,   , c,  d ,", ',') | axio::Trim;
+    auto view3 = axio::Split("a  ,   b,   , c,  d ,", ',') | axio::Trim;
+
+    axio::Vector<std::string_view> expected{"a", "b", "", "c", "d", ""};
+
+    axio::Vector<std::string_view> v1(view1.begin(), view1.end());
+    std::vector<std::string_view> v2(view2.begin(), view2.end());
+    std::list<std::string_view> v3(view3.begin(), view3.end());
+
+    CHECK_EQ(v1.Size(), expected.Size());
+    CHECK_EQ(v2.size(), expected.Size());
+    CHECK_EQ(v3.size(), expected.Size());
+
+    auto b1 = v1.begin();
+    auto b2 = v2.begin();
+    auto b3 = v3.begin();
+    for (axio::SizeT i = 0; i < expected.Size(); ++i) {
+      CHECK_EQ(*b1, expected[i]);
+      CHECK_EQ(*b2, expected[i]);
+      CHECK_EQ(*b3, expected[i]);
+      ++b1, ++b2, ++b3;
+    }
+  }
+  {
+    auto result = axio::Split("a  ,   b,   , c,  d ,", ',') | axio::Trim |
+                  axio::SkipEmpty;
+    axio::Vector<std::string> v(result.begin(), result.end());
+    // trim: {"a", "b", "", "c", "d", ""}
+    // skip empty: {"a", "b", "c", "d"}
+    CHECK_VECTOR(v, {"a", "b", "c", "d"});
+  }
+  {
+    struct StringViewHolder {
+      std::string_view sv;
+      explicit StringViewHolder(std::string_view s) : sv(s) {}
+    };
+
+    auto v = axio::Split("a  ,   b,   , c,  d ,", ',') | axio::Trim |
+             axio::SkipEmpty | axio::To<axio::Vector<std::string>>();
+    CHECK_VECTOR(v, {"a", "b", "c", "d"});
+
+    auto l = axio::Split("a  ,   b,   , c,  d ,", ',') | axio::Trim |
+             axio::SkipEmpty | axio::To<std::list<StringViewHolder>>();
+    CHECK_EQ(l.size(), v.Size());
+    auto b = l.begin();
+    for (axio::SizeT i = 0; i < v.Size(); ++i) {
+      CHECK_EQ(v[i], (*b).sv);
+      ++b;
+    }
+  }
 }

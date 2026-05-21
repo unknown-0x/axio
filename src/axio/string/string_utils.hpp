@@ -140,6 +140,362 @@ String StringJoinValues(std::string_view separator, Values&&... values) {
 
   return String(buffer.Data(), buffer.Size());
 }
+
+struct CharDelimiter {
+  char delim;
+
+  const char* Find(const char* first, const char* last) const {
+    if (first == last) {
+      return last;
+    }
+    const auto* p = std::memchr(first, delim, static_cast<SizeT>(last - first));
+    return p ? static_cast<const char*>(p) : last;
+  }
+
+  SizeT Size() const noexcept { return 1; }
+};
+
+struct StringDelimiter {
+  const char* delim;
+  SizeT size;
+
+  explicit StringDelimiter(std::string_view view)
+      : delim(view.data()), size(view.size()) {}
+
+  const char* Find(const char* first, const char* last) const {
+    const auto remaining = static_cast<SizeT>(last - first);
+    if (size > remaining) {
+      return last;
+    }
+
+    for (; first != last; ++first) {
+      if (std::memcmp(first, delim, size) == 0) {
+        return first;
+      }
+    }
+    return last;
+  }
+
+  SizeT Size() const noexcept { return size; }
+};
+
+struct AnyCharDelimiter {
+  const char* delim;
+  SizeT size;
+
+  explicit AnyCharDelimiter(std::string_view view)
+      : delim(view.data()), size(view.size()) {}
+
+  const char* Find(const char* first, const char* last) const {
+    for (; first != last; ++first) {
+      if (std::memchr(delim, *first, size)) {
+        return first;
+      }
+    }
+    return last;
+  }
+
+  SizeT Size() const noexcept { return 1; }
+};
+
+template <typename Delimiter>
+class SplitView {
+ public:
+  struct Iterator {
+    using iterator_category = std::input_iterator_tag;
+    using value_type = std::string_view;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type;
+
+    Iterator() noexcept : current_(nullptr), end_(nullptr), last_(nullptr) {}
+
+    Iterator(const char* current, const char* end, Delimiter* delim)
+        : current_(current), end_(end), last_(nullptr), delim_(delim) {
+      Advance();
+    }
+
+    std::string_view operator*() const {
+      return std::string_view{last_, static_cast<SizeT>(current_ - last_)};
+    }
+
+    Iterator& operator++() {
+      Advance();
+      return *this;
+    }
+
+    Iterator operator++(int) {
+      Iterator temp = *this;
+      Advance();
+      return temp;
+    }
+
+    Bool operator==(const Iterator& other) const noexcept {
+      return current_ == other.current_;
+    }
+
+    Bool operator!=(const Iterator& other) const noexcept {
+      return current_ != other.current_;
+    }
+
+   private:
+    void Advance() {
+      if (current_ == nullptr) {
+        return;
+      }
+
+      if (last_ == nullptr) {
+        last_ = current_;
+        current_ = delim_->Find(current_, end_);
+      } else {
+        if (current_ == end_) {
+          current_ = nullptr;
+          end_ = nullptr;
+          last_ = nullptr;
+        } else {
+          current_ += delim_->Size();
+          last_ = current_;
+          current_ = delim_->Find(current_, end_);
+        }
+      }
+    }
+
+    const char* current_;
+    const char* end_;
+    const char* last_;
+    Delimiter* delim_;
+  };
+
+  SplitView(std::string_view str, Delimiter delim) : str_(str), delim_(delim) {}
+
+  Iterator begin() {
+    const auto* current = str_.data();
+    return Iterator{current, current + str_.size(), &delim_};
+  }
+
+  Iterator end() { return Iterator(); }
+
+ private:
+  std::string_view str_;
+  Delimiter delim_;
+};
+
+inline auto Split(std::string_view sv, char delim) {
+  return SplitView<CharDelimiter>{sv, CharDelimiter{delim}};
+}
+
+template <std::size_t N>
+inline auto Split(std::string_view sv, const char (&delim)[N]) {
+  return SplitView<StringDelimiter>{
+      sv, StringDelimiter{std::string_view(delim, N - 1)}};
+}
+
+inline auto Split(std::string_view sv, const char* delim) {
+  return SplitView<StringDelimiter>{sv,
+                                    StringDelimiter{std::string_view(delim)}};
+}
+
+inline auto Split(std::string_view sv, std::string_view delim) {
+  return SplitView<StringDelimiter>{sv, StringDelimiter{delim}};
+}
+
+template <typename Delimiter>
+inline auto Split(std::string_view sv, Delimiter delim) {
+  return SplitView<Delimiter>{sv, delim};
+}
+
+template <typename Derived, typename BaseIterator>
+struct ViewIteratorBase {
+  using iterator_category = std::input_iterator_tag;
+  using value_type = std::string_view;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type*;
+  using reference = value_type;
+
+  BaseIterator base_it_;
+
+  value_type operator*() const {
+    return static_cast<const Derived*>(this)->Dereference();
+  }
+
+  Derived& operator++() {
+    static_cast<Derived*>(this)->Increment();
+    return *static_cast<Derived*>(this);
+  }
+
+  Derived operator++(int) {
+    Derived temp = *static_cast<Derived*>(this);
+    ++(*this);
+    return temp;
+  }
+
+  Bool operator==(const ViewIteratorBase& other) const {
+    return base_it_ == other.base_it_;
+  }
+
+  Bool operator!=(const ViewIteratorBase& other) const {
+    return base_it_ != other.base_it_;
+  }
+};
+
+template <typename UnderlyingView>
+struct TrimView {
+ public:
+  struct Iterator
+      : public ViewIteratorBase<Iterator, typename UnderlyingView::Iterator> {
+    std::string_view Dereference() const {
+      std::string_view s = *(this->base_it_);
+      if (s.empty()) {
+        return s;
+      }
+
+      SizeT start = 0;
+      SizeT end = s.size();
+      while (start < s.size() &&
+             std::isspace(static_cast<unsigned char>(s[start]))) {
+        ++start;
+      }
+
+      if (start == end) {
+        return {};
+      }
+
+      while (end > start &&
+             std::isspace(static_cast<unsigned char>(s[end - 1]))) {
+        --end;
+      }
+
+      return s.substr(start, end - start);
+    }
+
+    void Increment() { ++(this->base_it_); }
+  };
+
+  explicit TrimView(UnderlyingView view) : view_(view) {}
+  Iterator begin() { return Iterator{{view_.begin()}}; }
+  Iterator end() { return Iterator{{view_.end()}}; }
+
+ private:
+  UnderlyingView view_;
+};
+
+struct TrimAdapter {};
+inline constexpr TrimAdapter Trim;
+
+template <typename UnderlyingView>
+auto operator|(UnderlyingView view, TrimAdapter) {
+  return TrimView<UnderlyingView>(view);
+}
+
+template <typename UnderlyingView, typename Predicate>
+struct FilterView {
+  struct Iterator
+      : public ViewIteratorBase<Iterator, typename UnderlyingView::Iterator> {
+    typename UnderlyingView::Iterator base_end_;
+    Predicate pred_;
+
+    std::string_view Dereference() const { return *(this->base_it_); }
+
+    void Increment() {
+      ++(this->base_it_);
+      AdvanceToValid();
+    }
+
+    void AdvanceToValid() {
+      while (this->base_it_ != base_end_ && !pred_(*(this->base_it_))) {
+        ++(this->base_it_);
+      }
+    }
+  };
+
+  FilterView(UnderlyingView view, Predicate pred)
+      : view_(axio::Move(view)), pred_(pred) {}
+
+  Iterator begin() {
+    auto it = Iterator{{view_.begin()}, {view_.end()}, pred_};
+    it.AdvanceToValid();
+    return it;
+  }
+
+  Iterator end() { return Iterator{{view_.end()}, {view_.end()}, pred_}; }
+
+ private:
+  UnderlyingView view_;
+  Predicate pred_;
+};
+
+template <typename Predicate>
+struct FilterAdapter {
+  Predicate pred;
+};
+
+template <typename Predicate>
+auto Filter(Predicate&& pred) {
+  using DecayedPred = typename Decay<Predicate>::type;
+  return FilterAdapter<DecayedPred>{axio::Forward<Predicate>(pred)};
+}
+
+template <typename UnderlyingView, typename Predicate>
+auto operator|(UnderlyingView view, FilterAdapter<Predicate> adaptor) {
+  return FilterView<UnderlyingView, Predicate>(axio::Move(view),
+                                               axio::Move(adaptor.pred));
+}
+
+struct SkipEmptyAdapter {};
+inline constexpr SkipEmptyAdapter SkipEmpty;
+
+template <typename UnderlyingView>
+auto operator|(UnderlyingView view, SkipEmptyAdapter) {
+  return FilterView(axio::Move(view),
+                    [](std::string_view s) noexcept { return !s.empty(); });
+}
+
+namespace detail {
+template <typename T, typename = void>
+struct ExtractValueType {
+  using type = typename T::value_type;
+};
+
+template <typename T>
+struct ExtractValueType<T, Void<typename T::ValueType>> {
+  using type = typename T::ValueType;
+};
+
+template <typename T, typename V>
+using push_back_op = decltype(std::declval<T>().push_back(std::declval<V>()));
+
+template <typename T, typename V>
+using Push_Op = decltype(std::declval<T>().Push(std::declval<V>()));
+}  // namespace detail
+template <typename Container>
+struct ToContainerAdaptor {};
+
+template <typename Container>
+auto To() {
+  return ToContainerAdaptor<Container>{};
+}
+
+template <typename UnderlyingView, typename Container>
+auto operator|(UnderlyingView&& view, ToContainerAdaptor<Container>) {
+  using ValueType = typename detail::ExtractValueType<Container>::type;
+
+  Container container;
+
+  for (auto token : view) {
+    if constexpr (IsDetected<detail::push_back_op, Container,
+                             ValueType>::value) {
+      container.push_back(ValueType(token));
+    } else if constexpr (IsDetected<detail::Push_Op, Container,
+                                    ValueType>::value) {
+      container.Push(ValueType(token));
+    } else {
+      auto it = std::inserter(container, container.end());
+      *it = ValueType(token);
+    }
+  }
+
+  return container;
+}
 }  // namespace axio
 
 #endif
