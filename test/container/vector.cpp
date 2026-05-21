@@ -28,7 +28,7 @@ axio::Bool Expect(const Vector<T, A>& v, std::initializer_list<U> l) {
 }
 }  // namespace
 
-#define CHECK_VECTOR(v, ...) CHECK_TRUE(Expect(v, __VA_ARGS__));
+#define CHECK_VECTOR(v, ...) CHECK_TRUE(Expect(v, __VA_ARGS__))
 
 #define CHECK_IS_FULLY_EMPTY(v) \
   CHECK_TRUE(v.IsEmpty());      \

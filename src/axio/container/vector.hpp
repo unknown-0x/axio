@@ -82,7 +82,8 @@ class Vector : private detail::AllocatorHolder<A> {
         end_(nullptr),
         storage_end_(nullptr) {
     while (first != last) {
-      Push(*first++);
+      Push(*first);
+      ++first;
     }
   }
 
@@ -200,12 +201,14 @@ class Vector : private detail::AllocatorHolder<A> {
   void Assign(InputIt first, InputIt last) {
     auto beg = begin_;
     while (beg < end_ && first != last) {
-      *beg++ = *first++;
+      *beg++ = *first;
+      ++first;
     }
 
     if (beg == end_) {
       while (first != last) {
-        Push(*first++);
+        Push(*first);
+        ++first;
       }
     } else {
       DestroyElements(this->GetAlloc(), beg, end_);
@@ -406,7 +409,8 @@ class Vector : private detail::AllocatorHolder<A> {
   template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
   void Append(InputIt first, InputIt last) {
     while (first != last) {
-      Push(*first++);
+      Push(*first);
+      ++first;
     }
   }
 
@@ -564,7 +568,8 @@ class Vector : private detail::AllocatorHolder<A> {
     auto idx = static_cast<SizeType>(pos - begin_);
     const auto temp_idx = idx;
     while (first != last) {
-      Emplace(begin_ + idx++, *first++);
+      Emplace(begin_ + idx++, *first);
+      ++first;
     }
     return begin_ + temp_idx;
   }

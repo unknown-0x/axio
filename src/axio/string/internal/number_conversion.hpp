@@ -69,7 +69,7 @@ inline constexpr I kScaledConstant = I(10 * (I(1) << a) / b + 1);
 template <typename Integer>
 char* WriteIntegerToBuffer(char* out, Integer value) {
   using UInt = axio::T<MakeUnsigned<Integer>>;
-  
+
   // convert bool to int before test with unary + to silence warning if T
   // happens to be bool
   UInt n;
@@ -184,6 +184,9 @@ char* WriteIntegerToBuffer(char* out, Integer value) {
 }
 
 #undef WRITE_2
+#undef WRITE_2_MASKED
+#undef WRITE_2_MASKED_3
+#undef WRITE_2_MASKED_4
 }  // namespace internal
 }  // namespace axio
 
