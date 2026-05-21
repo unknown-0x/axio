@@ -459,4 +459,20 @@ TEST_CASE(StringUtils, Split) {
       ++b;
     }
   }
+  {
+    auto v = axio::Split("aa@@bb@@cc@@dd@@ee@@ff", "@@") | axio::Take(3) |
+             axio::To<axio::Vector<std::string_view>>();
+    CHECK_VECTOR(v, {"aa", "bb", "cc"});
+  }
+  {
+    auto v = axio::Split("aa@@bb@@cc@@dd@@ee@@ff", "@@") | axio::Take(10) |
+             axio::To<axio::Vector<std::string_view>>();
+    CHECK_VECTOR(v, {"aa", "bb", "cc", "dd", "ee", "ff"});
+  }
+  {
+    auto v = axio::Split("aa@@bb@@cc  @@   dd@@  ee\t@@ff", "@@") |
+             axio::Drop(2) | axio::Take(3) | axio::Trim |
+             axio::To<axio::Vector<std::string_view>>();
+    CHECK_VECTOR(v, {"cc", "dd", "ee"});
+  }
 }

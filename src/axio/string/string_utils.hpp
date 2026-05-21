@@ -314,27 +314,15 @@ struct ViewIteratorBase {
 
   BaseIterator base_it_;
 
-  value_type operator*() const {
-    return static_cast<const Derived*>(this)->Dereference();
-  }
-
-  Derived& operator++() {
-    static_cast<Derived*>(this)->Increment();
-    return *static_cast<Derived*>(this);
-  }
-
   Derived operator++(int) {
     Derived temp = *static_cast<Derived*>(this);
-    ++(*this);
+    ++(*static_cast<Derived*>(this));
     return temp;
   }
 
-  Bool operator==(const ViewIteratorBase& other) const {
-    return base_it_ == other.base_it_;
-  }
-
   Bool operator!=(const ViewIteratorBase& other) const {
-    return base_it_ != other.base_it_;
+    return !(static_cast<const Derived&>(*this) ==
+             static_cast<const Derived&>(other));
   }
 };
 
@@ -343,7 +331,7 @@ struct TrimView {
  public:
   struct Iterator
       : public ViewIteratorBase<Iterator, typename UnderlyingView::Iterator> {
-    std::string_view Dereference() const {
+    std::string_view operator*() const {
       std::string_view s = *(this->base_it_);
       if (s.empty()) {
         return s;
@@ -368,7 +356,14 @@ struct TrimView {
       return s.substr(start, end - start);
     }
 
-    void Increment() { ++(this->base_it_); }
+    Iterator& operator++() {
+      ++(this->base_it_);
+      return *this;
+    }
+
+    Bool operator==(const Iterator& other) const {
+      return this->base_it_ == other.base_it_;
+    }
   };
 
   explicit TrimView(UnderlyingView view) : view_(view) {}
@@ -383,7 +378,7 @@ struct TrimAdapter {};
 inline constexpr TrimAdapter Trim;
 
 template <typename UnderlyingView>
-auto operator|(UnderlyingView view, TrimAdapter) {
+inline auto operator|(UnderlyingView view, TrimAdapter) {
   return TrimView<UnderlyingView>(view);
 }
 
@@ -394,11 +389,16 @@ struct FilterView {
     typename UnderlyingView::Iterator base_end_;
     Predicate pred_;
 
-    std::string_view Dereference() const { return *(this->base_it_); }
+    std::string_view operator*() const { return *(this->base_it_); }
 
-    void Increment() {
+    Iterator& operator++() {
       ++(this->base_it_);
       AdvanceToValid();
+      return *this;
+    }
+
+    Bool operator==(const Iterator& other) const {
+      return this->base_it_ == other.base_it_;
     }
 
     void AdvanceToValid() {
@@ -430,13 +430,13 @@ struct FilterAdapter {
 };
 
 template <typename Predicate>
-auto Filter(Predicate&& pred) {
+inline auto Filter(Predicate&& pred) {
   using DecayedPred = typename Decay<Predicate>::type;
   return FilterAdapter<DecayedPred>{axio::Forward<Predicate>(pred)};
 }
 
 template <typename UnderlyingView, typename Predicate>
-auto operator|(UnderlyingView view, FilterAdapter<Predicate> adaptor) {
+inline auto operator|(UnderlyingView view, FilterAdapter<Predicate> adaptor) {
   return FilterView<UnderlyingView, Predicate>(axio::Move(view),
                                                axio::Move(adaptor.pred));
 }
@@ -445,9 +445,118 @@ struct SkipEmptyAdapter {};
 inline constexpr SkipEmptyAdapter SkipEmpty;
 
 template <typename UnderlyingView>
-auto operator|(UnderlyingView view, SkipEmptyAdapter) {
+inline auto operator|(UnderlyingView view, SkipEmptyAdapter) {
   return FilterView(axio::Move(view),
                     [](std::string_view s) noexcept { return !s.empty(); });
+}
+
+template <typename UnderlyingView>
+struct TakeView {
+  using UnderlyingIterator = decltype(std::declval<UnderlyingView>().begin());
+
+  struct Iterator
+      : public ViewIteratorBase<Iterator, typename UnderlyingView::Iterator> {
+    using Base = ViewIteratorBase<Iterator, typename UnderlyingView::Iterator>;
+
+    Iterator(typename UnderlyingView::Iterator base_it, SizeT n)
+        : Base{base_it}, count_(n) {}
+
+    std::string_view operator*() const { return *(this->base_it_); }
+
+    Iterator& operator++() {
+      ++this->base_it_;
+      if (count_ > 0) {
+        --count_;
+      }
+      return *this;
+    }
+
+    Bool operator==(const Iterator& other) const {
+      if (count_ == other.count_) {
+        return true;
+      }
+      return this->base_it_ == other.base_it_;
+    }
+
+   private:
+    SizeT count_;
+  };
+
+  TakeView(UnderlyingView view, SizeT n) : view_(axio::Move(view)), n_(n) {}
+  auto begin() { return Iterator(view_.begin(), n_); }
+  auto end() { return Iterator(view_.end(), 0); }
+
+ private:
+  UnderlyingView view_;
+  SizeT n_;
+};
+
+struct TakeAdapter {
+  SizeT n;
+};
+
+inline auto Take(SizeT n) {
+  return TakeAdapter{n};
+}
+
+template <typename UnderlyingView>
+inline auto operator|(UnderlyingView&& view, TakeAdapter adapter) {
+  return TakeView<typename Decay<UnderlyingView>::type>(
+      axio::Forward<UnderlyingView>(view), adapter.n);
+}
+
+template <typename UnderlyingView>
+struct DropView {
+  using BaseIteratorType = decltype(std::declval<UnderlyingView>().begin());
+
+  struct Iterator : public ViewIteratorBase<Iterator, BaseIteratorType> {
+    using Base = ViewIteratorBase<Iterator, BaseIteratorType>;
+
+    Iterator(BaseIteratorType base_it) : Base{base_it} {}
+
+    std::string_view operator*() const { return *(this->base_it_); }
+
+    Iterator& operator++() {
+      ++this->base_it_;
+      return *this;
+    }
+
+    bool operator==(const Iterator& other) const {
+      return this->base_it_ == other.base_it_;
+    }
+  };
+
+  DropView(UnderlyingView view, SizeT n) : view_(axio::Move(view)), n_(n) {}
+
+  auto begin() {
+    auto it = view_.begin();
+    auto end_it = view_.end();
+    for (SizeT i = 0; i < n_ && it != end_it; ++i) {
+      ++it;
+    }
+
+    return Iterator(it);
+  }
+
+  auto end() { return Iterator(view_.end()); }
+
+ private:
+  UnderlyingView view_;
+  SizeT n_;
+};
+
+struct DropAdapter {
+  SizeT n;
+};
+
+inline auto Drop(SizeT n) {
+  return DropAdapter{n};
+}
+
+template <typename UnderlyingView>
+inline auto operator|(UnderlyingView&& view, DropAdapter adapter) {
+  return DropView<typename Decay<UnderlyingView>::type>(
+      axio::Forward<UnderlyingView>(view), adapter.n);
 }
 
 namespace detail {
@@ -471,12 +580,12 @@ template <typename Container>
 struct ToContainerAdaptor {};
 
 template <typename Container>
-auto To() {
+inline auto To() {
   return ToContainerAdaptor<Container>{};
 }
 
 template <typename UnderlyingView, typename Container>
-auto operator|(UnderlyingView&& view, ToContainerAdaptor<Container>) {
+inline auto operator|(UnderlyingView&& view, ToContainerAdaptor<Container>) {
   using ValueType = typename detail::ExtractValueType<Container>::type;
 
   Container container;
