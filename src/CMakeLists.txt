@@ -1,34 +1,10 @@
-add_library(
-    axio 
-
-    axio/axio.cpp
-    axio/base/arch.hpp
-    axio/base/compiler.hpp
-    axio/base/endianness.hpp
-    axio/base/macros.hpp
-    axio/base/os.hpp
-    axio/base/type_traits.hpp
-    axio/base/types.hpp
-
-    axio/container/detail/iterator_traits.hpp
-    axio/container/detail/tuple_fwd.hpp
-    axio/container/array.hpp
-    axio/container/tuple.hpp
-    axio/container/vector.hpp
-
-    axio/memory/allocator.hpp
-
-    axio/string/internal/number_conversion.hpp
-    axio/string/buffer.hpp
-    axio/string/char_traits.hpp
-    axio/string/axio_repr.hpp
-    axio/string/string.hpp
-    axio/string/string_utils.hpp
-
-    axio/utility/forward.hpp
-    axio/utility/move.hpp
-)
+add_library(axio INTERFACE)
 add_library(axio::axio ALIAS axio)
+
+target_include_directories(axio INTERFACE ${PROJECT_ROOT}/src/)
+
+file(GLOB_RECURSE AXIO_HEADERS "axio/*.hpp")
+target_sources(axio INTERFACE ${AXIO_HEADERS})
 
 if(BUILD_SHARED_LIBS AND MSVC)
   set_target_properties(axio
@@ -39,4 +15,3 @@ endif()
 
 target_enable_clang_format(axio)
 target_enable_clang_tidy(axio)
-target_export_api(axio AXIO_API)
