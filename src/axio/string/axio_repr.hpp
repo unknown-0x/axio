@@ -4,16 +4,17 @@
 #include "../utility/forward.hpp"
 
 #include "internal/number_conversion.hpp"
+#include "internal/zmij.hpp"
 
 #include <string_view>
 
 namespace axio {
-#define MAKE_AXIO_REPR_FOR_INTEGER(T)                               \
-  template <typename Output>                                        \
-  void AxioRepr(Output& out, T integer) {                           \
-    char buffer[internal::kIntToStringBufferSize<T>];               \
-    char* end = internal::WriteIntegerToBuffer<T>(buffer, integer); \
-    out.Append(buffer, static_cast<SizeT>(end - buffer));           \
+#define MAKE_AXIO_REPR_FOR_INTEGER(T)                             \
+  template <typename Output>                                      \
+  void AxioRepr(Output& out, T value) {                           \
+    char buffer[internal::kIntToStringBufferSize<T>];             \
+    char* end = internal::WriteIntegerToBuffer<T>(buffer, value); \
+    out.Append(buffer, static_cast<SizeT>(end - buffer));         \
   }
 
 MAKE_AXIO_REPR_FOR_INTEGER(int);
@@ -23,6 +24,21 @@ MAKE_AXIO_REPR_FOR_INTEGER(long long);
 MAKE_AXIO_REPR_FOR_INTEGER(unsigned);
 MAKE_AXIO_REPR_FOR_INTEGER(unsigned long);
 MAKE_AXIO_REPR_FOR_INTEGER(unsigned long long);
+
+#undef MAKE_AXIO_REPR_FOR_INTEGER
+
+#define MAKE_AXIO_REPR_FOR_FLOAT(T, buffer_size)           \
+  template <typename Output>                               \
+  void AxioRepr(Output& out, T value) {                    \
+    char buffer[buffer_size + 1];                          \
+    auto end = zmij::write(buffer, sizeof(buffer), value); \
+    out.Append(buffer, static_cast<SizeT>(end - buffer));  \
+  }
+
+MAKE_AXIO_REPR_FOR_FLOAT(float, zmij::float_buffer_size);
+MAKE_AXIO_REPR_FOR_FLOAT(double, zmij::double_buffer_size);
+
+#undef MAKE_AXIO_REPR_FOR_FLOAT
 
 template <typename Output>
 void AxioRepr(Output& out, Bool b) {
