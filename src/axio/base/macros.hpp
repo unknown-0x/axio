@@ -71,4 +71,12 @@ auto ArraySizeImpl(const T (&arr)[N]) -> char (&)[N];
 
 #define AXIO_IGNORE(x) ((void)x)
 
+#if AXIO_COMPILER_MSVC
+#define AXIO_INLINE __forceinline
+#elif AXIO_COMPILER_GCC || AXIO_COMPILER_CLANG
+#define AXIO_INLINE inline __attribute__((always_inline))
+#else
+#define AXIO_INLINE inline
+#endif
+
 #endif
