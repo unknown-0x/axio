@@ -277,12 +277,9 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
     }();
 
     if constexpr (IsVoid<R>::value) {
-      // std::invoke(*f, axio::Forward<Args>(args)...);
       (*f)(axio::Forward<Args>(args)...);
     } else {
       return (*f)(axio::Forward<Args>(args)...);
-
-      // return std::invoke(*f, axio::Forward<Args>(args)...);
     }
   }
 
@@ -290,10 +287,8 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
   static R EmptyCallableStub(const FixedFunction*, Args... args) {
     if constexpr (IsVoid<R>::value) {
       Fn{}(axio::Forward<Args>(args)...);
-      // std::invoke(Fn{}, axio::Forward<Args>(args)...);
     } else {
       return Fn{}(axio::Forward<Args>(args)...);
-      // return std::invoke(Fn{}, axio::Forward<Args>(args)...);
     }
   }
 
@@ -302,10 +297,8 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
     const auto& f = *std::launder(reinterpret_cast<const Fn*>(self->storage_));
 
     if constexpr (IsVoid<R>::value) {
-      // std::invoke(f, axio::Forward<Args>(args)...);
       f(axio::Forward<Args>(args)...);
     } else {
-      // return std::invoke(f, axio::Forward<Args>(args)...);
       return f(axio::Forward<Args>(args)...);
     }
   }
@@ -315,10 +308,8 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
     const auto f = reinterpret_cast<R2 (*)(Args...)>(self->function_);
 
     if constexpr (IsVoid<R>::value) {
-      // std::invoke(f, axio::Forward<Args>(args)...);
       f(axio::Forward<Args>(args)...);
     } else {
-      // return std::invoke(f, axio::Forward<Args>(args)...);
       return f(axio::Forward<Args>(args)...);
     }
   }
