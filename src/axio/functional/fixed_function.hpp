@@ -127,9 +127,6 @@ struct CallableRefBindTarget {
 };
 
 template <typename Callable>
-struct EmptyCallableBindTarget {};
-
-template <typename Callable>
 struct CallableBindTarget {
   Callable target;
 };
@@ -189,13 +186,6 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
   FixedFunction(CallableRefBindTarget<const Fn> target) noexcept
       : const_object_{target.target}, stub_{&CallableViewStub<const Fn>} {}
 
-  template <typename Fn,
-            typename = typename EnableIf<
-                IsEmpty<Fn>::value && IsDefaultConstructible<Fn>::value &&
-                IsInvocableR<R, Fn, Args...>::value>::type>
-  FixedFunction(EmptyCallableBindTarget<Fn> target) noexcept
-      : empty_{}, stub_{&EmptyCallableStub<Fn>} {}
-
   template <
       typename Fn,
       typename DecayedFn = typename Decay<Fn>::type,
@@ -236,12 +226,12 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
   }
 
  private:
-  [[noreturn]] static R NullStub(const FixedFunction*, Args...) {
+  [[noreturn]] static R NullStub(const FixedFunction*, Args&&...) {
     throw BadFunctionCall{};
   }
 
   template <auto Function>
-  static R FunctionStub(const FixedFunction*, Args... args) {
+  static R FunctionStub(const FixedFunction*, Args&&... args) {
     if constexpr (IsVoid<R>::value) {
       std::invoke(Function, axio::Forward<Args>(args)...);
     } else {
@@ -250,7 +240,7 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
   }
 
   template <auto MemberFunction, typename T>
-  static R MemberFunctionStub(const FixedFunction* self, Args... args) {
+  static R MemberFunctionStub(const FixedFunction* self, Args&&... args) {
     auto* const c = [&self] {
       if constexpr (IsConst<T>::value) {
         return static_cast<T*>(self->const_object_);
@@ -267,7 +257,7 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
   }
 
   template <typename Fn>
-  static R CallableViewStub(const FixedFunction* self, Args... args) {
+  static R CallableViewStub(const FixedFunction* self, Args&&... args) {
     auto* const f = [&self] {
       if constexpr (IsConst<Fn>::value) {
         return static_cast<Fn*>(self->const_object_);
@@ -284,16 +274,7 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
   }
 
   template <typename Fn>
-  static R EmptyCallableStub(const FixedFunction*, Args... args) {
-    if constexpr (IsVoid<R>::value) {
-      Fn{}(axio::Forward<Args>(args)...);
-    } else {
-      return Fn{}(axio::Forward<Args>(args)...);
-    }
-  }
-
-  template <typename Fn>
-  static R SmallCallableStub(const FixedFunction* self, Args... args) {
+  static R SmallCallableStub(const FixedFunction* self, Args&&... args) {
     const auto& f = *std::launder(reinterpret_cast<const Fn*>(self->storage_));
 
     if constexpr (IsVoid<R>::value) {
@@ -304,8 +285,8 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
   }
 
   template <typename R2, typename... Args2>
-  static R FunctionPtrStub(const FixedFunction* self, Args... args) {
-    const auto f = reinterpret_cast<R2 (*)(Args...)>(self->function_);
+  static R FunctionPtrStub(const FixedFunction* self, Args&&... args) {
+    const auto f = reinterpret_cast<R2 (*)(Args2...)>(self->function_);
 
     if constexpr (IsVoid<R>::value) {
       f(axio::Forward<Args>(args)...);
@@ -315,7 +296,7 @@ class FixedFunction<R(Args...), STORAGE_SIZE> {
   }
 
   using AnyFunction = void (*)();
-  using StubFunction = R (*)(const FixedFunction*, Args...);
+  using StubFunction = R (*)(const FixedFunction*, Args&&...);
 
   struct EmptyType {};
 
@@ -353,24 +334,12 @@ AXIO_INLINE OpaqueFunctionBindTarget<R(Args...)> Bind(
   return {fn};
 }
 
-template <typename Callable>
-AXIO_INLINE EmptyCallableBindTarget<Callable> Bind() noexcept {
-  return {};
-}
-
-template <
-    typename Callable,
-    typename = typename EnableIf<IsEmpty<Callable>::value &&
-                                 IsDefaultConstructible<Callable>::value>::type>
-AXIO_INLINE EmptyCallableBindTarget<Callable> Bind(Callable callable) noexcept {
-  return {};
-}
-
 template <typename Callable,
           typename DecayedCallable = typename Decay<Callable>::type,
           typename = typename EnableIf<
-              IsTriviallyCopyable<DecayedCallable>::value &&
-              IsTriviallyDestructible<DecayedCallable>::value>::type>
+                  IsTriviallyCopyable<DecayedCallable>::value &&
+                  IsTriviallyDestructible<DecayedCallable>::value,
+              int>::type>
 AXIO_INLINE CallableBindTarget<DecayedCallable> Bind(
     Callable&& callable) noexcept {
   return {axio::Forward<Callable>(callable)};
