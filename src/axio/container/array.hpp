@@ -109,10 +109,10 @@ struct Array<T, 0> {
   constexpr Pointer Data() noexcept { return nullptr; }
   constexpr ConstPointer Data() const noexcept { return nullptr; }
 
-  constexpr Reference At(SizeType i) { return *Data(); }
-  constexpr ConstReference At(SizeType i) const { return *Data(); }
-  constexpr Reference operator[](SizeType i) { return *Data(); }
-  constexpr ConstReference operator[](SizeType i) const { return *Data(); }
+  constexpr Reference At(SizeType) { return *Data(); }
+  constexpr ConstReference At(SizeType) const { return *Data(); }
+  constexpr Reference operator[](SizeType) { return *Data(); }
+  constexpr ConstReference operator[](SizeType) const { return *Data(); }
 
   constexpr Reference Front() { return *Data(); }
   constexpr ConstReference Front() const { return *Data(); }
