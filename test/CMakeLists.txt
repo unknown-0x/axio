@@ -57,3 +57,8 @@ axio_test(
     string/string_utils.cpp
     string/number_conversion.cpp
 )
+
+axio_test(
+    functional_test
+    functional/fixed_function.cpp
+)
