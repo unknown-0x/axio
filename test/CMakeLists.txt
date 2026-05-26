@@ -60,5 +60,5 @@ axio_test(
 
 axio_test(
     functional_test
-    functional/fixed_function.cpp
+    functional/small_function.cpp
 )

@@ -1,7 +1,13 @@
 function(target_enable_clang_format target)
     if(CLANG_FORMAT_EXE)
         get_target_property(TARGET_SOURCES ${target} SOURCES)
+
         if(NOT TARGET_SOURCES)
+            get_target_property(TARGET_SOURCES ${target} INTERFACE_SOURCES)
+        endif()
+
+        if(NOT TARGET_SOURCES)
+            message(WARNING "No sources found for ${target}")
             return()
         endif()
 
@@ -24,7 +30,13 @@ endfunction()
 function(target_enable_clang_tidy target)
     if(ENABLE_CLANG_TIDY)
         get_target_property(TARGET_SOURCES ${target} SOURCES)
+       
         if(NOT TARGET_SOURCES)
+            get_target_property(TARGET_SOURCES ${target} INTERFACE_SOURCES)
+        endif()
+
+        if(NOT TARGET_SOURCES)
+            message(WARNING "No sources found for ${target}")
             return()
         endif()
 
