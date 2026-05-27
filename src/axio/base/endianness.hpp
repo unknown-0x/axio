@@ -1,7 +1,9 @@
 #ifndef AXIO_BASE_ENDIANNESS_HPP_
 #define AXIO_BASE_ENDIANNESS_HPP_
 
+#if __cplusplus >= 202002L
 #include <bit>
+#endif
 
 namespace axio {
 #define AXIO_LITTLE_ENDIAN 1234
