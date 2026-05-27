@@ -12,7 +12,7 @@
 
 ---
 
-**Axio** is a utility library built using C++17 and above. It provides data structures, string utilities, and flexible type traits.
+**Axio** is a utility library built using C++17 and above. It provides data structures, string utilities, flexible type traits, and more!!!
 
 ## Features
 
@@ -89,13 +89,12 @@ int main() {
 #include <axio/container/tuple.hpp>
 #include <iostream>
 #include <vector>
+#include <array>
+
+static_assert(axio::IsSpecializationOf_V<std::vector<int>, std::vector>, "");
 
 static_assert(
-    axio::IsSpecializationOf<std::vector<int>, std::vector>::value,
-    "");
-
-static_assert(
-    axio::IsSpecializationOf<axio::Tuple<int, double, int>, axio::Tuple>::value,
+    axio::IsSpecializationOf_V<axio::Tuple<int, double, int>, axio::Tuple>,
     "");
 
 template <typename T>
@@ -104,8 +103,8 @@ using HasPushBack = decltype(std::declval<T>().push_back(
 
 template <typename C, typename V>
 void TryPushBack(C& container, V&& value) {
-  if constexpr (axio::IsDetected<HasPushBack, C>::value) {
-    container.push_back(std::forward<V>(value));
+  if constexpr (axio::IsDetected_V<HasPushBack, C>) {
+    container.push_back(axio::Forward<V>(value));
     std::cout << "Ok.\n";
   } else {
     std::cout << "No push_back available!\n";
@@ -121,6 +120,75 @@ int main() {
 }
 ```
 
+```c++
+#include <axio/utility/defer.hpp>
+#include <iostream>
+#include <string_view>
+
+void ProcessFile(std::string_view path) {
+  AXIO_DEFER([&] { std::cout << "Closing file: " << path << std::endl; });
+
+  std::cout << "Opening file: " << path << std::endl;
+
+  const char* data = path.data();
+  if (data) {
+    return;
+  }
+}
+
+int main() {
+  ProcessFile("foo/document.txt");
+  return 0;
+}
+
+// Output:
+// Opening file: foo/document.txt
+// Closing file: foo/document.txt
+```
+
+```c++
+#include <axio/functional/small_function.hpp>
+#include <iostream>
+#include <string_view>
+
+int Add(int x, int y) {
+  return x + y;
+}
+
+struct LargeFunctor {
+  int arr[10];
+
+  LargeFunctor(int value) {
+    for (int& x : arr) {
+      x = value;
+    }
+  }
+
+  int operator()(int extra) const {
+    for (int x : arr) {
+      extra += x;
+    }
+    return extra;
+  }
+};
+
+int main() {
+  int x = 1, y = 2;
+  axio::SmallFunction<int(int, int)> f1 = Add;
+  axio::SmallFunction<int(int, int)> f2 = [x, y](int a, int b) {
+    return x + y + a + b;
+  };
+  axio::SmallFunction<int(int)> f3 = LargeFunctor(3);  // heap
+  axio::SmallFunction<int(int), sizeof(LargeFunctor), alignof(LargeFunctor)>
+      f4 = LargeFunctor{1};            // stack
+      
+  std::cout << f1(1, 2) << std::endl;  // 3
+  std::cout << f2(1, 2) << std::endl;  // 6
+  std::cout << f3(1) << std::endl;     // 31
+  std::cout << f4(1) << std::endl;     // 11
+  return 0;
+}
+```
 ---
 
 ## Integration
