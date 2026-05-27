@@ -1,7 +1,9 @@
 #ifndef AXIO_BASE_ENDIANNESS_HPP_
 #define AXIO_BASE_ENDIANNESS_HPP_
 
-#if __cplusplus >= 202002L
+#include "macros.hpp"
+
+#if AXIO_CXX_STANDARD >= 202002L
 #include <bit>
 #endif
 

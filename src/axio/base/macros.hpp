@@ -79,4 +79,10 @@ auto ArraySizeImpl(const T (&arr)[N]) -> char (&)[N];
 #define AXIO_INLINE inline
 #endif
 
+#if defined(_MSVC_LANG)
+#define AXIO_CXX_STANDARD _MSVC_LANG
+#else
+#define AXIO_CXX_STANDARD __cplusplus
+#endif
+
 #endif
