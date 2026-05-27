@@ -5,12 +5,12 @@
 
 namespace axio {
 template <typename T>
-constexpr T&& Forward(axio::T<RemoveReference<T>>& value) noexcept {
+constexpr T&& Forward(RemoveReference_T<T>& value) noexcept {
   return static_cast<T&&>(value);
 }
 
 template <typename T>
-constexpr T&& Forward(axio::T<RemoveReference<T>>&& value) noexcept {
+constexpr T&& Forward(RemoveReference_T<T>&& value) noexcept {
   return static_cast<T&&>(value);
 }
 }  // namespace axio

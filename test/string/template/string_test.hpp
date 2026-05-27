@@ -432,8 +432,8 @@ STRING_TEST_CASE(String, MoveAssignment) {
         CHECK_EQ(a1.Size(), test.size);
         CHECK_EQ(a1, test.text);
 
-        if (axio::IsSpecializationOf<typename String::AllocatorType,
-                                     axio::Allocator>::value) {
+        if (axio::IsSpecializationOf_V<typename String::AllocatorType,
+                                       axio::Allocator>) {
           CHECK_EQ(b.Size(), 0);
           CHECK_TRUE(b.IsEmpty());
           CHECK_EQ(b, TEXT(""));
@@ -445,8 +445,8 @@ STRING_TEST_CASE(String, MoveAssignment) {
         CHECK_EQ(a2.Size(), test.size);
         CHECK_EQ(a2, test.text);
 
-        if (axio::IsSpecializationOf<typename String::AllocatorType,
-                                     axio::Allocator>::value) {
+        if (axio::IsSpecializationOf_V<typename String::AllocatorType,
+                                       axio::Allocator>) {
           CHECK_EQ(b.Size(), 0);
           CHECK_TRUE(b.IsEmpty());
           CHECK_EQ(b, TEXT(""));

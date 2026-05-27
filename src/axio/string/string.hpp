@@ -20,14 +20,11 @@ class BasicString : private detail::AllocatorHolder<A> {
   using AllocatorTraits = std::allocator_traits<A>;
 
   template <typename It>
-  using EnableIfForwardIt =
-      typename EnableIf<IsForwardIterator<It>::value, int>::type;
+  using EnableIfForwardIt = EnableIf_T<IsForwardIterator_V<It>, int>;
 
   template <typename It>
   using EnableIfNotForwardIt =
-      typename EnableIf<IsInputIterator<It>::value &&
-                            !IsForwardIterator<It>::value,
-                        int>::type;
+      EnableIf_T<IsInputIterator_V<It> && !IsForwardIterator_V<It>, int>;
 
   template <typename U>
   struct IsContiguousIterator : FalseType {};
@@ -57,21 +54,20 @@ class BasicString : private detail::AllocatorHolder<A> {
   static constexpr SizeType kGrowthFactor = SizeType(2);
   static constexpr ValueType kNullTerminator = ValueType();
 
-  static_assert(!IsArray<ValueType>::value,
-                "ValueType must not be an array type");
-  static_assert(IsStandardLayout<ValueType>::value,
+  static_assert(!IsArray_V<ValueType>, "ValueType must not be an array type");
+  static_assert(IsStandardLayout_V<ValueType>,
                 "ValueType must be a standard-layout type");
-  static_assert(IsTriviallyCopyable<ValueType>::value,
+  static_assert(IsTriviallyCopyable_V<ValueType>,
                 "ValueType must be trivially copyable");
 
  private:
   using StringViewType = std::basic_string_view<ValueType, TraitsType>;
 
   template <typename StringViewLike, typename Dummy>
-  using EnableIfIsStringViewLike = typename EnableIf<
-      IsConvertible<const StringViewLike&, StringViewType>::value &&
-          !IsConvertible<const StringViewLike&, ConstPointer>::value,
-      Dummy>::type;
+  using EnableIfIsStringViewLike =
+      EnableIf_T<IsConvertible_V<const StringViewLike&, StringViewType> &&
+                     !IsConvertible_V<const StringViewLike&, ConstPointer>,
+                 Dummy>;
 
  public:
   BasicString() noexcept(noexcept(AllocatorType())) : AllocatorHolder() {
@@ -1648,8 +1644,7 @@ class BasicString : private detail::AllocatorHolder<A> {
 
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   static void Copy(Pointer dst, ForwardIt first, SizeType n) {
-    if constexpr (IsContiguousIterator<
-                      typename Decay<ForwardIt>::type>::value) {
+    if constexpr (IsContiguousIterator<Decay_T<ForwardIt>>::value) {
       TraitsType::copy(dst, first, n);
     } else {
       const auto end = dst + n;

@@ -12,7 +12,7 @@ struct IsInputIterator : FalseType {};
 template <typename It>
 struct IsInputIterator<
     It,
-    Void<typename std::iterator_traits<It>::iterator_category>>
+    Void_T<typename std::iterator_traits<It>::iterator_category>>
     : IsBaseOf<std::input_iterator_tag,
                typename std::iterator_traits<It>::iterator_category> {};
 
@@ -22,9 +22,15 @@ struct IsForwardIterator : FalseType {};
 template <typename It>
 struct IsForwardIterator<
     It,
-    Void<typename std::iterator_traits<It>::iterator_category>>
+    Void_T<typename std::iterator_traits<It>::iterator_category>>
     : IsBaseOf<std::forward_iterator_tag,
                typename std::iterator_traits<It>::iterator_category> {};
+
+template <typename It>
+inline constexpr auto IsInputIterator_V = IsInputIterator<It>::value;
+
+template <typename It>
+inline constexpr auto IsForwardIterator_V = IsForwardIterator<It>::value;
 }  // namespace axio
 
 #endif

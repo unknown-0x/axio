@@ -39,12 +39,11 @@ constexpr bool ConstexprConstructorTest() {
     struct A {
       A() = delete;
     };
-    static_assert(!axio::IsDefaultConstructible<Tuple<A>>::value, "");
-    static_assert(axio::IsDefaultConstructible<Tuple<int, double>>::value, "");
-    static_assert(
-        axio::IsNothrowConstructible<Tuple<int, double>,
-                                     const Tuple<int, double>&>::value,
-        "");
+    static_assert(!axio::IsDefaultConstructible_V<Tuple<A>>, "");
+    static_assert(axio::IsDefaultConstructible_V<Tuple<int, double>>, "");
+    static_assert(axio::IsNothrowConstructible_V<Tuple<int, double>,
+                                                 const Tuple<int, double>&>,
+                  "");
   }
   {
     Tuple<int, int, int> t(1, 2, 3);
@@ -63,10 +62,8 @@ constexpr bool ConstexprConstructorTest() {
     Tuple<int, int, int> t(x, y, z);
     Tuple copy(t);
     Tuple moved(axio::Move(t));
-    static_assert(axio::IsSame<decltype(copy), Tuple<int, int, int>>::value,
-                  "");
-    static_assert(axio::IsSame<decltype(moved), Tuple<int, int, int>>::value,
-                  "");
+    static_assert(axio::IsSame_V<decltype(copy), Tuple<int, int, int>>, "");
+    static_assert(axio::IsSame_V<decltype(moved), Tuple<int, int, int>>, "");
     ret = ret && (Get<0>(t) == 1 && Get<1>(t) == 2 && Get<2>(t) == 3);
   }
   {
@@ -266,39 +263,39 @@ constexpr bool ConstexprMakeTuple() {
   bool ret = true;
   {
     auto t = MakeTuple();
-    static_assert(axio::IsSame<decltype(t), Tuple<>>::value, "");
+    static_assert(axio::IsSame_V<decltype(t), Tuple<>>, "");
   }
   {
     auto t = MakeTuple(1, 2.0, 'a');
-    static_assert(axio::IsSame<decltype(t), Tuple<int, double, char>>::value,
-                  "");
+    static_assert(axio::IsSame_V<decltype(t), Tuple<int, double, char>>, "");
     ret = ret && Get<0>(t) == 1 && Get<1>(t) == 2.0 && Get<2>(t) == 'a';
   }
   {
     int x = 10;
     auto t = MakeTuple(x);
-    static_assert(axio::IsSame<decltype(t), Tuple<int>>::value, "");
+    static_assert(axio::IsSame_V<decltype(t), Tuple<int>>, "");
     x = 42;
     ret = ret && Get<0>(t) == 10;
-    static_assert(axio::IsSame<decltype(MakeTuple(std::declval<int&>())),
-                               Tuple<int>>::value,
-                  "");
+    static_assert(
+        axio::IsSame_V<decltype(MakeTuple(std::declval<int&>())), Tuple<int>>,
+        "");
   }
   {
     const int x = 10;
     auto t = MakeTuple(x);
-    static_assert(axio::IsSame<decltype(t), Tuple<int>>::value, "");
+    static_assert(axio::IsSame_V<decltype(t), Tuple<int>>, "");
     ret = ret && Get<0>(t) == 10;
-    static_assert(axio::IsSame<decltype(MakeTuple(std::declval<const int&>())),
-                               Tuple<int>>::value,
-                  "");
+    static_assert(
+        axio::IsSame_V<decltype(MakeTuple(std::declval<const int&>())),
+                       Tuple<int>>,
+        "");
   }
   {
     std::string_view sv = "hello";
     int x = 10;
     auto t = MakeTuple(axio::Move(sv), x);
-    static_assert(
-        axio::IsSame<decltype(t), Tuple<std::string_view, int>>::value, "");
+    static_assert(axio::IsSame_V<decltype(t), Tuple<std::string_view, int>>,
+                  "");
     ret = ret && Get<0>(t) == "hello" && Get<1>(t) == 10;
   }
   return ret;
@@ -309,7 +306,7 @@ constexpr bool ConstexprForwardAsTuple() {
   bool ret = true;
   {
     auto t = ForwardAsTuple();
-    static_assert(axio::IsSame<decltype(t), Tuple<>>::value, "");
+    static_assert(axio::IsSame_V<decltype(t), Tuple<>>, "");
   }
   {
     int x = 10;
@@ -319,14 +316,14 @@ constexpr bool ConstexprForwardAsTuple() {
     Get<1>(t) = 5.5;
     ret = ret && x == 20 && y == 5.5;
     static_assert(
-        axio::IsSame<decltype(ForwardAsTuple(std::declval<int&>(),
-                                             std::declval<double&>())),
-                     Tuple<int&, double&>>::value,
+        axio::IsSame_V<decltype(ForwardAsTuple(std::declval<int&>(),
+                                               std::declval<double&>())),
+                       Tuple<int&, double&>>,
         "");
     static_assert(
-        axio::IsSame<decltype(ForwardAsTuple(std::declval<const int&>(),
-                                             std::declval<const double&>())),
-                     Tuple<const int&, const double&>>::value,
+        axio::IsSame_V<decltype(ForwardAsTuple(std::declval<const int&>(),
+                                               std::declval<const double&>())),
+                       Tuple<const int&, const double&>>,
         "");
   }
   {
@@ -354,27 +351,27 @@ static_assert(TupleSize<Tuple<int>>::value == 1, "");
 static_assert(TupleSize<Tuple<>>::value == 0, "");
 
 static_assert(
-    axio::IsSame<TupleElement<0, Tuple<int, double, char>>::type, int>::value,
+    axio::IsSame_V<TupleElement<0, Tuple<int, double, char>>::type, int>,
     "");
-static_assert(axio::IsSame<TupleElement<1, Tuple<int, double, char>>::type,
-                           double>::value,
-              "");
 static_assert(
-    axio::IsSame<TupleElement<2, Tuple<int, double, char>>::type, char>::value,
+    axio::IsSame_V<TupleElement<1, Tuple<int, double, char>>::type, double>,
+    "");
+static_assert(
+    axio::IsSame_V<TupleElement<2, Tuple<int, double, char>>::type, char>,
     "");
 
 // won't compile =))
 // using X = TupleElement<3, Tuple<int, double, char>>::type;
 
-static_assert(axio::IsSame<TupleElement<0, const Tuple<int, double>>::type,
-                           const int>::value,
-              "");
-static_assert(axio::IsSame<TupleElement<0, volatile Tuple<int, double>>::type,
-                           volatile int>::value,
+static_assert(
+    axio::IsSame_V<TupleElement<0, const Tuple<int, double>>::type, const int>,
+    "");
+static_assert(axio::IsSame_V<TupleElement<0, volatile Tuple<int, double>>::type,
+                             volatile int>,
               "");
 static_assert(
-    axio::IsSame<TupleElement<0, const volatile Tuple<int, double>>::type,
-                 const volatile int>::value,
+    axio::IsSame_V<TupleElement<0, const volatile Tuple<int, double>>::type,
+                   const volatile int>,
     "");
 
 constexpr bool ConstepxrStructuredBinding() {
@@ -438,21 +435,19 @@ constexpr bool ConstexprTupleCat() {
   bool ret = true;
   {
     auto empty = TupleCat();
-    static_assert(axio::IsSame<decltype(empty), Tuple<>>::value, "");
+    static_assert(axio::IsSame_V<decltype(empty), Tuple<>>, "");
 
     auto t =
         TupleCat(empty, Tuple<int, int>{1, 2}, Tuple<std::string_view>{"foo"});
     static_assert(
-        axio::IsSame<decltype(t), Tuple<int, int, std::string_view>>::value,
-        "");
+        axio::IsSame_V<decltype(t), Tuple<int, int, std::string_view>>, "");
   }
   {
     axio::Tuple<int, char, char> a(1, 'a', 'b');
     axio::Tuple<double, int> b(2.5, 42);
     auto r = TupleCat(a, b);
     static_assert(
-        axio::IsSame<decltype(r), Tuple<int, char, char, double, int>>::value,
-        "");
+        axio::IsSame_V<decltype(r), Tuple<int, char, char, double, int>>, "");
     ret = ret && Get<0>(r) == 1 && Get<1>(r) == 'a' && Get<2>(r) == 'b';
     ret = ret && Get<3>(r) == 2.5 && Get<4>(r) == 42;
   }
@@ -465,9 +460,9 @@ constexpr bool ConstexprTupleCat() {
     Tuple<std::string_view, Empty> t3{sv, {}};
     Tuple<double> t4{c};
     auto t = TupleCat(t1, t2, t3, t4);
-    static_assert(axio::IsSame<decltype(t),
-                               Tuple<int&, int&, double, double&, int&, int,
-                                     std::string_view, Empty, double>>::value,
+    static_assert(axio::IsSame_V<decltype(t),
+                                 Tuple<int&, int&, double, double&, int&, int,
+                                       std::string_view, Empty, double>>,
                   "");
     x = 11;
     y = 22;
@@ -486,10 +481,9 @@ constexpr bool ConstexprTupleCat() {
                                             42};
     Tuple<double> t2{2.0};
     auto t = TupleCat(t1, t2);
-    static_assert(
-        axio::IsSame<decltype(t),
-                     Tuple<Tuple<int, double>, char, int, double>>::value,
-        "");
+    static_assert(axio::IsSame_V<decltype(t),
+                                 Tuple<Tuple<int, double>, char, int, double>>,
+                  "");
     ret = ret && Get<0>(Get<0>(t)) == 1 && Get<1>(Get<0>(t)) == 3.0;
     ret = ret && Get<1>(t) == 'a' && Get<2>(t) == 42 && Get<3>(t) == 2.0;
   }
@@ -497,20 +491,21 @@ constexpr bool ConstexprTupleCat() {
     Tuple<int, char> t1{1, 'a'};
     Tuple<double, const char*> t2{3.0, "bar"};
     auto t = TupleCat(Tuple<std::string_view>("foo"), t1, Move(t2));
-    static_assert(axio::IsSame<decltype(t), Tuple<std::string_view, int, char,
-                                                  double, const char*>>::value,
-                  "");
+    static_assert(
+        axio::IsSame_V<decltype(t),
+                       Tuple<std::string_view, int, char, double, const char*>>,
+        "");
     ret = ret && Get<0>(t) == "foo";
     ret = ret && Get<1>(t) == 1 && Get<2>(t) == 'a';
     ret = ret && Get<3>(t) == 3.0 && Get<4>(t) == std::string_view{"bar"};
   }
   static_assert(
-      axio::IsSame<decltype(TupleCat(
-                       std::declval<Tuple<int, int&, const int&>>(),
-                       std::declval<Tuple<int, const int, const volatile int,
-                                          volatile int>>())),
-                   Tuple<int, int&, const int&, int, const int,
-                         const volatile int, volatile int>>::value,
+      axio::IsSame_V<decltype(TupleCat(
+                         std::declval<Tuple<int, int&, const int&>>(),
+                         std::declval<Tuple<int, const int, const volatile int,
+                                            volatile int>>())),
+                     Tuple<int, int&, const int&, int, const int,
+                           const volatile int, volatile int>>,
       "");
   return ret;
 }
@@ -856,8 +851,8 @@ TEST_CASE(Tuple, MoveAssign) {
 TEST_CASE(Tuple, LvalueReturnsLRef) {
   Tuple<int, std::string> t(1, "hello");
 
-  static_assert(axio::IsLvalueReference<decltype(Get<0>(t))>::value, "");
-  static_assert(axio::IsLvalueReference<decltype(Get<1>(t))>::value, "");
+  static_assert(axio::IsLvalueReference_V<decltype(Get<0>(t))>, "");
+  static_assert(axio::IsLvalueReference_V<decltype(Get<1>(t))>, "");
 
   CHECK_EQ(Get<0>(t), 1);
   CHECK_EQ(Get<1>(t), "hello");
@@ -866,23 +861,18 @@ TEST_CASE(Tuple, LvalueReturnsLRef) {
 TEST_CASE(Tuple, ConstLvalueReturnsConstRef) {
   const Tuple<int, std::string> t(1, "hello");
 
-  static_assert(
-      axio::IsConst<
-          typename axio::RemoveReference<decltype(Get<0>(t))>::type>::value,
-      "");
-  static_assert(
-      axio::IsConst<
-          typename axio::RemoveReference<decltype(Get<1>(t))>::type>::value,
-      "");
-  static_assert(axio::IsLvalueReference<decltype(Get<0>(t))>::value, "");
-  static_assert(axio::IsLvalueReference<decltype(Get<1>(t))>::value, "");
+  static_assert(axio::IsConst_V<axio::RemoveReference_T<decltype(Get<0>(t))>>,
+                "");
+  static_assert(axio::IsConst_V<axio::RemoveReference_T<decltype(Get<1>(t))>>,
+                "");
+  static_assert(axio::IsLvalueReference_V<decltype(Get<0>(t))>, "");
+  static_assert(axio::IsLvalueReference_V<decltype(Get<1>(t))>, "");
 
   CHECK_EQ(Get<0>(t), 1);
   CHECK_EQ(Get<1>(t), "hello");
 }
 
-static_assert(axio::IsRvalueReference<decltype(Get<0>(Tuple<int>(1)))>::value,
-              "");
+static_assert(axio::IsRvalueReference_V<decltype(Get<0>(Tuple<int>(1)))>, "");
 
 TEST_CASE(Tuple, MoveFromRvalueTuple) {
   Tracker::Reset();
@@ -905,7 +895,7 @@ TEST_CASE(Tuple, ForwardingLvalueVsRvalue) {
   CHECK_EQ(r2, "changed");
 }
 
-static_assert(axio::IsSame<decltype(Get<0>(Tuple<int>(1))), int&&>::value, "");
+static_assert(axio::IsSame_V<decltype(Get<0>(Tuple<int>(1))), int&&>, "");
 
 TEST_CASE(Tuple, MakeTupleCopiesLvalues) {
   Tracker::Reset();

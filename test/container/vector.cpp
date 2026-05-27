@@ -872,10 +872,10 @@ class NonTrivial {
 
 int NonTrivial::alive_count = 0;
 
-static_assert(!axio::IsTriviallyCopyable<NonTrivial>::value,
+static_assert(!axio::IsTriviallyCopyable_V<NonTrivial>,
               "NonTrivial must not be trivially copyable!");
 
-static_assert(!axio::IsTriviallyDestructible<NonTrivial>::value,
+static_assert(!axio::IsTriviallyDestructible_V<NonTrivial>,
               "NonTrivial must not be trivially destructible!");
 
 #define CHECK_ALIVE_COUNT(val) CHECK_EQ(NonTrivial::alive_count, val)

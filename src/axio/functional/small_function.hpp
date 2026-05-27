@@ -144,20 +144,21 @@ class SmallFunction<R(Args...), STORAGE_SIZE, STORAGE_ALIGN> {
       (SIZE <= kStorageSize) && (ALIGN <= kStorageAlign) &&
       (kStorageAlign % ALIGN == 0);
 
+  template <typename F>
+  using SelectedModel = Conditional_T<kFitsStorage<sizeof(F), alignof(F)>,
+                                      LocalModel<F>,
+                                      HeapModel<F>>;
+
   SmallFunction() noexcept : vtable_{nullptr} {}
 
   SmallFunction(NullPtrT) noexcept : vtable_{nullptr} {}
 
   template <typename Callable,
-            typename DecayedCallable = typename Decay<Callable>::type,
-            typename = typename EnableIf<
-                !IsSame<DecayedCallable, SmallFunction>::value &&
-                IsInvocableR<R, DecayedCallable, Args...>::value>::type>
+            typename DecayedCallable = Decay_T<Callable>,
+            typename = EnableIf_T<!IsSame_V<DecayedCallable, SmallFunction> &&
+                                  IsInvocableR_V<R, DecayedCallable, Args...>>>
   SmallFunction(Callable&& callable)
-      : vtable_{&axio::T<Conditional<
-            kFitsStorage<sizeof(DecayedCallable), alignof(DecayedCallable)>,
-            LocalModel<DecayedCallable>,
-            HeapModel<DecayedCallable>>>::kVTable} {
+      : vtable_{&SelectedModel<DecayedCallable>::kVTable} {
     if constexpr (kFitsStorage<sizeof(DecayedCallable),
                                alignof(DecayedCallable)>) {
       new (GetStack<DecayedCallable>())
@@ -213,10 +214,9 @@ class SmallFunction<R(Args...), STORAGE_SIZE, STORAGE_ALIGN> {
   }
 
   template <typename Callable,
-            typename DecayedCallable = typename Decay<Callable>::type,
-            typename = typename EnableIf<
-                !IsSame<DecayedCallable, SmallFunction>::value &&
-                IsInvocableR<R, DecayedCallable, Args...>::value>::type>
+            typename DecayedCallable = Decay_T<Callable>,
+            typename = EnableIf_T<!IsSame_V<DecayedCallable, SmallFunction> &&
+                                  IsInvocableR_V<R, DecayedCallable, Args...>>>
   SmallFunction& operator=(Callable&& callable) {
     if (vtable_) {
       vtable_->destroy(this);
@@ -224,8 +224,8 @@ class SmallFunction<R(Args...), STORAGE_SIZE, STORAGE_ALIGN> {
 
     static constexpr Bool kUseLocal =
         kFitsStorage<sizeof(DecayedCallable), alignof(DecayedCallable)>;
-    vtable_ = &axio::T<Conditional<kUseLocal, LocalModel<DecayedCallable>,
-                                   HeapModel<DecayedCallable>>>::kVTable;
+
+    vtable_ = &SelectedModel<DecayedCallable>::kVTable;
     if constexpr (kUseLocal) {
       new (GetStack<DecayedCallable>())
           DecayedCallable(axio::Forward<Callable>(callable));

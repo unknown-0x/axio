@@ -9,18 +9,16 @@
 
 namespace axio {
 namespace tuple_detail {
-template <SizeT I, typename T, Bool = axio::V<ShouldUseEBO<T>>>
+template <SizeT I, typename T, Bool = ShouldUseEBO_V<T>>
 struct AXIO_EMPTY_BASES TupleValue : public T {
   using Type = T;
   static constexpr Bool kUseEBO = true;
 
-  constexpr TupleValue() noexcept(IsNothrowDefaultConstructible<T>::value)
-      : T() {}
+  constexpr TupleValue() noexcept(IsNothrowDefaultConstructible_V<T>) : T() {}
 
   template <typename U,
-            typename = axio::T<
-                EnableIf<!IsSame<TupleValue, typename Decay<U>::type>::value>>>
-  constexpr TupleValue(U&& arg) noexcept(IsNothrowConstructible<T, U&&>::value)
+            typename = EnableIf_T<!IsSame_V<TupleValue, Decay_T<U>>>>
+  constexpr TupleValue(U&& arg) noexcept(IsNothrowConstructible_V<T, U&&>)
       : T(Forward<U>(arg)) {}
 };
 
@@ -29,13 +27,12 @@ struct TupleValue<I, T, false> {
   using Type = T;
   static constexpr Bool kUseEBO = false;
 
-  constexpr TupleValue() noexcept(IsNothrowDefaultConstructible<T>::value)
+  constexpr TupleValue() noexcept(IsNothrowDefaultConstructible_V<T>)
       : value() {}
 
   template <typename U,
-            typename = axio::T<
-                EnableIf<!IsSame<TupleValue, typename Decay<U>::type>::value>>>
-  constexpr TupleValue(U&& arg) noexcept(IsNothrowConstructible<T, U&&>::value)
+            typename = EnableIf_T<!IsSame_V<TupleValue, Decay_T<U>>>>
+  constexpr TupleValue(U&& arg) noexcept(IsNothrowConstructible_V<T, U&&>)
       : value(Forward<U>(arg)) {}
 
   T value;
@@ -57,38 +54,33 @@ struct AXIO_EMPTY_BASES
       : TupleValue<Is, Ts>(Forward<Us>(args))... {}
 
   template <typename... Us,
-            axio::T<EnableIf<
-                sizeof...(Us) == sizeof...(Ts) &&
-                    Conjunction<IsConstructible<Ts, const Us&>...>::value,
-                Bool>> = true>
+            EnableIf_T<sizeof...(Us) == sizeof...(Ts) &&
+                           Conjunction_V<IsConstructible<Ts, const Us&>...>,
+                       Bool> = true>
   constexpr TupleImpl(
       const TupleImpl<std::index_sequence<Is...>, Us...>&
-          other) noexcept(Conjunction<IsNothrowConstructible<Ts,
-                                                             const Us&>...>::
-                              value)
+          other) noexcept(Conjunction_V<IsNothrowConstructible<Ts,
+                                                               const Us&>...>)
       : TupleValue<Is, Ts>(
             GetValue(static_cast<const TupleValue<Is, Us>&>(other)))... {}
 
-  template <
-      typename... Us,
-      axio::T<EnableIf<sizeof...(Us) == sizeof...(Ts) &&
-                           Conjunction<IsConstructible<Ts, Us&&>...>::value,
-                       Bool>> = true>
+  template <typename... Us,
+            EnableIf_T<sizeof...(Us) == sizeof...(Ts) &&
+                           Conjunction_V<IsConstructible<Ts, Us&&>...>,
+                       Bool> = true>
   constexpr TupleImpl(
       TupleImpl<std::index_sequence<Is...>, Us...>&&
-          other) noexcept(Conjunction<IsNothrowConstructible<Ts,
-                                                             Us&&>...>::value)
+          other) noexcept(Conjunction_V<IsNothrowConstructible<Ts, Us&&>...>)
       : TupleValue<Is, Ts>(
             GetValue(static_cast<TupleValue<Is, Us>&&>(other)))... {}
 
-  template <
-      typename... Us,
-      axio::T<EnableIf<sizeof...(Us) == sizeof...(Ts) &&
-                           Conjunction<IsAssignable<Ts&, const Us&>...>::value,
-                       Bool>> = true>
+  template <typename... Us,
+            EnableIf_T<sizeof...(Us) == sizeof...(Ts) &&
+                           Conjunction_V<IsAssignable<Ts&, const Us&>...>,
+                       Bool> = true>
   constexpr TupleImpl&
   operator=(const TupleImpl<std::index_sequence<Is...>, Us...>& other) noexcept(
-      Conjunction<IsNothrowAssignable<Ts&, const Us&>...>::value) {
+      Conjunction_V<IsNothrowAssignable<Ts&, const Us&>...>) {
     ((GetValue(static_cast<TupleValue<Is, Ts>&>(*this)) =
           GetValue(static_cast<const TupleValue<Is, Us>&>(other))),
      ...);
@@ -97,12 +89,12 @@ struct AXIO_EMPTY_BASES
   }
 
   template <typename... Us,
-            axio::T<EnableIf<sizeof...(Us) == sizeof...(Ts) &&
-                                 Conjunction<IsAssignable<Ts&, Us&&>...>::value,
-                             Bool>> = true>
+            EnableIf_T<sizeof...(Us) == sizeof...(Ts) &&
+                           Conjunction_V<IsAssignable<Ts&, Us&&>...>,
+                       Bool> = true>
   constexpr TupleImpl&
   operator=(TupleImpl<std::index_sequence<Is...>, Us...>&& other) noexcept(
-      Conjunction<IsNothrowAssignable<Ts&, Us&&>...>::value) {
+      Conjunction_V<IsNothrowAssignable<Ts&, Us&&>...>) {
     ((GetValue(static_cast<TupleValue<Is, Ts>&>(*this)) =
           GetValue(static_cast<TupleValue<Is, Us>&&>(other))),
      ...);
@@ -171,8 +163,7 @@ template <typename>
 struct Ignore : TrueType {};
 
 template <typename T>
-using UnwrapDecayT =
-    typename UnwrapReferenceWrapper<typename Decay<T>::type>::type;
+using UnwrapDecayT = typename UnwrapReferenceWrapper<Decay_T<T>>::type;
 }  // namespace tuple_detail
 
 template <typename... Ts>
@@ -181,78 +172,75 @@ struct AXIO_EMPTY_BASES Tuple
                                      Ts...> {
   template <SizeT I>
   using Element =
-      tuple_detail::TupleValue<I, axio::T<tuple_detail::TypeAt<I, Ts...>>>;
+      tuple_detail::TupleValue<I,
+                               typename tuple_detail::TypeAt<I, Ts...>::type>;
 
   using Base =
       tuple_detail::TupleImpl<std::make_index_sequence<sizeof...(Ts)>, Ts...>;
 
   template <typename Dummy = void,
-            axio::T<EnableIf<Conjunction<tuple_detail::Ignore<Dummy>,
-                                         IsDefaultConstructible<Ts>...>::value,
-                             Bool>> = true>
+            EnableIf_T<Conjunction_V<tuple_detail::Ignore<Dummy>,
+                                     IsDefaultConstructible<Ts>...>,
+                       Bool> = true>
   constexpr Tuple() noexcept(
-      Conjunction<IsNothrowDefaultConstructible<Ts>...>::value)
+      Conjunction_V<IsNothrowDefaultConstructible<Ts>...>)
       : Base() {}
 
   template <typename Dummy = void,
-            axio::T<EnableIf<Conjunction<tuple_detail::Ignore<Dummy>,
-                                         IsCopyConstructible<Ts>...>::value,
-                             Bool>> = true>
+            EnableIf_T<Conjunction_V<tuple_detail::Ignore<Dummy>,
+                                     IsCopyConstructible<Ts>...>,
+                       Bool> = true>
   constexpr explicit Tuple(const Ts&... args) noexcept(
-      Conjunction<IsNothrowCopyConstructible<Ts>...>::value)
+      Conjunction_V<IsNothrowCopyConstructible<Ts>...>)
       : Base(args...) {}
 
-  template <
-      typename... Us,
-      axio::T<EnableIf<sizeof...(Us) == sizeof...(Ts) &&
-                           Conjunction<IsConstructible<Ts, Us&&>...>::value,
-                       Bool>> = true>
+  template <typename... Us,
+            EnableIf_T<sizeof...(Us) == sizeof...(Ts) &&
+                           Conjunction_V<IsConstructible<Ts, Us&&>...>,
+                       Bool> = true>
   constexpr explicit Tuple(Us&&... args) noexcept(
-      Conjunction<IsNothrowConstructible<Ts, Us&&>...>::value)
+      Conjunction_V<IsNothrowConstructible<Ts, Us&&>...>)
       : Base(Forward<Us>(args)...) {}
 
   constexpr Tuple(const Tuple&) = default;
   constexpr Tuple& operator=(const Tuple&) = default;
   constexpr Tuple(Tuple&&) noexcept(
-      Conjunction<IsNothrowMoveConstructible<Ts>...>::value) = default;
+      Conjunction_V<IsNothrowMoveConstructible<Ts>...>) = default;
   constexpr Tuple& operator=(Tuple&&) noexcept(
-      Conjunction<IsNothrowMoveAssignable<Ts>...>::value) = default;
+      Conjunction_V<IsNothrowMoveAssignable<Ts>...>) = default;
 
   template <typename... Us,
-            axio::T<EnableIf<
-                sizeof...(Us) == sizeof...(Ts) &&
-                    Conjunction<IsConstructible<Ts, const Us&>...>::value,
-                Bool>> = true>
+            EnableIf_T<sizeof...(Us) == sizeof...(Ts) &&
+                           Conjunction_V<IsConstructible<Ts, const Us&>...>,
+                       Bool> = true>
   constexpr explicit Tuple(const Tuple<Us...>& other) noexcept(
-      Conjunction<IsNothrowConstructible<Ts, const Us&>...>::value)
+      Conjunction_V<IsNothrowConstructible<Ts, const Us&>...>)
       : Base(static_cast<const typename Tuple<Us...>::Base&>(other)) {}
 
-  template <
-      typename... Us,
-      axio::T<EnableIf<sizeof...(Us) == sizeof...(Ts) &&
-                           Conjunction<IsConstructible<Ts, Us&&>...>::value,
-                       Bool>> = true>
+  template <typename... Us,
+            EnableIf_T<sizeof...(Us) == sizeof...(Ts) &&
+                           Conjunction_V<IsConstructible<Ts, Us&&>...>,
+                       Bool> = true>
   constexpr explicit Tuple(Tuple<Us...>&& other) noexcept(
-      Conjunction<IsNothrowConstructible<Ts, Us&&>...>::value)
+      Conjunction_V<IsNothrowConstructible<Ts, Us&&>...>)
       : Base(static_cast<typename Tuple<Us...>::Base&&>(other)) {}
 
-  template <
-      typename... Us,
-      axio::T<EnableIf<sizeof...(Us) == sizeof...(Ts) &&
-                           Conjunction<IsAssignable<Ts&, const Us&>...>::value,
-                       Bool>> = true>
+  template <typename... Us,
+            EnableIf_T<sizeof...(Us) == sizeof...(Ts) &&
+                           Conjunction_V<IsAssignable<Ts&, const Us&>...>,
+                       Bool> = true>
   constexpr Tuple& operator=(const Tuple<Us...>& other) noexcept(
-      Conjunction<IsNothrowAssignable<Ts&, const Us&>...>::value) {
+      Conjunction_V<IsNothrowAssignable<Ts&, const Us&>...>) {
     Base::operator=(static_cast<const typename Tuple<Us...>::Base&>(other));
     return *this;
   }
 
   template <typename... Us,
-            axio::T<EnableIf<sizeof...(Us) == sizeof...(Ts) &&
-                                 Conjunction<IsAssignable<Ts&, Us&&>...>::value,
-                             Bool>> = true>
+            EnableIf_T<sizeof...(Us) == sizeof...(Ts) &&
+                           Conjunction_V<IsAssignable<Ts&, Us&&>...>,
+                       Bool> = true>
   constexpr Tuple& operator=(Tuple<Us...>&& other) noexcept(
-      Conjunction<IsNothrowAssignable<Ts&, Us&&>...>::value) {
+      Conjunction_V<IsNothrowAssignable<Ts&, Us&&>...>) {
     Base::operator=(static_cast<typename Tuple<Us...>::Base&&>(other));
     return *this;
   }
@@ -266,7 +254,7 @@ struct TupleSize<Tuple<Ts...>> : IntegralConstant<SizeT, sizeof...(Ts)> {};
 
 template <SizeT I, typename... Ts>
 struct TupleElement<I, Tuple<Ts...>> {
-  using type = axio::T<tuple_detail::TypeAt<I, Ts...>>;
+  using type = typename tuple_detail::TypeAt<I, Ts...>::type;
 };
 
 template <SizeT I, typename... Ts>
@@ -403,19 +391,16 @@ template <typename T, typename TTuple>
 constexpr T MakeFromTuple(TTuple&& t) {
   return tuple_detail::MakeFromTupleImpl<T>(
       Forward<TTuple>(t),
-      std::make_index_sequence<
-          TupleSize<typename RemoveReference<TTuple>::type>::value>{});
+      std::make_index_sequence<TupleSize<RemoveReference_T<TTuple>>::value>{});
 }
 
-template <typename... Tuples,
-          typename Sizes = std::index_sequence<
-              TupleSize<typename Decay<Tuples>::type>::value...>,
-          typename Outer = typename tuple_detail::BuildOuter<Sizes>::type,
-          typename Inner = typename tuple_detail::BuildInner<Sizes>::type,
-          typename R = typename tuple_detail::TupleCatResult<
-              Outer,
-              Inner,
-              Tuple<typename Decay<Tuples>::type...>>::type>
+template <
+    typename... Tuples,
+    typename Sizes = std::index_sequence<TupleSize<Decay_T<Tuples>>::value...>,
+    typename Outer = typename tuple_detail::BuildOuter<Sizes>::type,
+    typename Inner = typename tuple_detail::BuildInner<Sizes>::type,
+    typename R = typename tuple_detail::
+        TupleCatResult<Outer, Inner, Tuple<Decay_T<Tuples>...>>::type>
 constexpr auto TupleCat(Tuples&&... tuples) -> R {
   return tuple_detail::TupleCatImpl<R>(
       Outer{}, Inner{}, ForwardAsTuple(Forward<Tuples>(tuples)...));
@@ -472,9 +457,9 @@ constexpr Bool TupleLessThanImpl(
 
 template <typename... Ts,
           typename... Us,
-          axio::T<EnableIf<sizeof...(Ts) == sizeof...(Us) &&
-                               (IsEqualityComparable<Ts, Us>::value && ...),
-                           Bool>> = true>
+          EnableIf_T<sizeof...(Ts) == sizeof...(Us) &&
+                         (IsEqualityComparable_V<Ts, Us> && ...),
+                     Bool> = true>
 constexpr Bool
 operator==(const Tuple<Ts...>& lhs, const Tuple<Us...>& rhs) noexcept(noexcept(
     tuple_detail::TupleEqualImpl(lhs,
@@ -493,9 +478,9 @@ constexpr Bool operator!=(const Tuple<Ts...>& lhs,
 
 template <typename... Ts,
           typename... Us,
-          axio::T<EnableIf<sizeof...(Ts) == sizeof...(Us) &&
-                               (IsLessThanComparable<Ts, Us>::value && ...),
-                           Bool>> = true>
+          EnableIf_T<sizeof...(Ts) == sizeof...(Us) &&
+                         (IsLessThanComparable_V<Ts, Us> && ...),
+                     Bool> = true>
 constexpr Bool
 operator<(const Tuple<Ts...>& lhs, const Tuple<Us...>& rhs) noexcept(
     noexcept(tuple_detail::TupleLessThanImpl(
@@ -563,7 +548,7 @@ struct tuple_size<axio::Tuple<Ts...>>
 
 template <size_t I, typename... Ts>
 struct tuple_element<I, axio::Tuple<Ts...>> {
-  using type = axio::T<axio::tuple_detail::TypeAt<I, Ts...>>;
+  using type = typename axio::tuple_detail::TypeAt<I, Ts...>::type;
 };
 }  // namespace std
 

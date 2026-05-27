@@ -14,6 +14,7 @@
 #include <stdint.h>  // uint64_t
 #include <string.h>  // memcpy
 
+#include <cstdint>
 #include <limits>       // std::numeric_limits
 #include <type_traits>  // std::conditional_t
 
@@ -34,6 +35,8 @@
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#elif defined(_MSC_VER)
+#pragma warning(push, 0)
 #endif
 
 namespace axio {
@@ -921,9 +924,10 @@ auto to_bcd8(uint64_t abcdefgh) noexcept -> bcd_result {
 #elif ZMIJ_USE_SSE
   // Evaluate the 4-digit limbs and arrange them such that we get a result which
   // is in the correct order.
+  static constexpr uint64_t k4DigitsLimbScale = ((10000ull << 32) - 1);
   uint64_t abcd_efgh =
       (abcdefgh << 32) -
-      uint64_t((10000ull << 32) - 1) * ((abcdefgh * div10k_sig) >> div10k_exp);
+      k4DigitsLimbScale * ((abcdefgh * div10k_sig) >> div10k_exp);
   __m128i v = to_bcd_4x4(_mm_set_epi64x(0, abcd_efgh), *d);
 #if defined(__x86_64__) || defined(_M_X64)
   uint64_t bcd = _mm_cvtsi128_si64(v);
@@ -1309,6 +1313,8 @@ template auto write(double value, char* buffer) noexcept -> char*;
 
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
 #endif
 
 #endif

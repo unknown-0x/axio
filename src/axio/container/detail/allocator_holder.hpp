@@ -5,7 +5,7 @@
 
 namespace axio {
 namespace detail {
-template <typename A, Bool = ShouldUseEBO<A>::value>
+template <typename A, Bool = ShouldUseEBO_V<A>>
 struct AllocatorHolder : public A {
   AllocatorHolder() noexcept(noexcept(A())) = default;
   AllocatorHolder(const A& other) noexcept(noexcept(A(other))) : A(other) {}

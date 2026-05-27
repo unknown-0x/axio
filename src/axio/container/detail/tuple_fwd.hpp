@@ -24,15 +24,15 @@ template <SizeT I, typename T>
 struct TupleElement;
 template <SizeT I, typename T>
 struct TupleElement<I, const T> {
-  using type = axio::T<AddConst<axio::T<TupleElement<I, T>>>>;
+  using type = AddConst_T<typename TupleElement<I, T>::type>;
 };
 template <SizeT I, typename T>
 struct TupleElement<I, volatile T> {
-  using type = axio::T<AddVolatile<axio::T<TupleElement<I, T>>>>;
+  using type = AddVolatile_T<typename TupleElement<I, T>::type>;
 };
 template <SizeT I, typename T>
 struct TupleElement<I, const volatile T> {
-  using type = axio::T<AddCV<axio::T<TupleElement<I, T>>>>;
+  using type = AddCV_T<typename TupleElement<I, T>::type>;
 };
 }  // namespace axio
 

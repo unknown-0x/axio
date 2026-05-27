@@ -14,7 +14,7 @@ String StringCat() {
 
 template <typename... Ts>
 String StringCat(Ts&&... args) {
-  static_assert(kHasAxioReprPack<Ts...>,
+  static_assert((HasAxioRepr<Ts>::value && ...),
                 "All arguments to StringCat must support AxioRepr");
 
   Buffer<> buffer{};
@@ -26,7 +26,7 @@ void StringAppend(String&) {}
 
 template <typename... Ts>
 void StringAppend(String& s, Ts&&... args) {
-  static_assert(kHasAxioReprPack<Ts...>,
+  static_assert((HasAxioRepr<Ts>::value && ...),
                 "All arguments to StringAppend must support AxioRepr");
   Buffer<> buffer{};
   (AxioRepr(buffer, axio::Forward<Ts>(args)), ...);
@@ -431,7 +431,7 @@ struct FilterAdapter {
 
 template <typename Predicate>
 inline auto Filter(Predicate&& pred) {
-  using DecayedPred = typename Decay<Predicate>::type;
+  using DecayedPred = Decay_T<Predicate>;
   return FilterAdapter<DecayedPred>{axio::Forward<Predicate>(pred)};
 }
 
@@ -501,8 +501,8 @@ inline auto Take(SizeT n) {
 
 template <typename UnderlyingView>
 inline auto operator|(UnderlyingView&& view, TakeAdapter adapter) {
-  return TakeView<typename Decay<UnderlyingView>::type>(
-      axio::Forward<UnderlyingView>(view), adapter.n);
+  return TakeView<Decay_T<UnderlyingView>>(axio::Forward<UnderlyingView>(view),
+                                           adapter.n);
 }
 
 template <typename UnderlyingView>
@@ -555,8 +555,8 @@ inline auto Drop(SizeT n) {
 
 template <typename UnderlyingView>
 inline auto operator|(UnderlyingView&& view, DropAdapter adapter) {
-  return DropView<typename Decay<UnderlyingView>::type>(
-      axio::Forward<UnderlyingView>(view), adapter.n);
+  return DropView<Decay_T<UnderlyingView>>(axio::Forward<UnderlyingView>(view),
+                                           adapter.n);
 }
 
 namespace detail {
@@ -566,7 +566,7 @@ struct ExtractValueType {
 };
 
 template <typename T>
-struct ExtractValueType<T, Void<typename T::ValueType>> {
+struct ExtractValueType<T, Void_T<typename T::ValueType>> {
   using type = typename T::ValueType;
 };
 
@@ -591,11 +591,9 @@ inline auto operator|(UnderlyingView&& view, ToContainerAdaptor<Container>) {
   Container container;
 
   for (auto token : view) {
-    if constexpr (IsDetected<detail::push_back_op, Container,
-                             ValueType>::value) {
+    if constexpr (IsDetected_V<detail::push_back_op, Container, ValueType>) {
       container.push_back(ValueType(token));
-    } else if constexpr (IsDetected<detail::Push_Op, Container,
-                                    ValueType>::value) {
+    } else if constexpr (IsDetected_V<detail::Push_Op, Container, ValueType>) {
       container.Push(ValueType(token));
     } else {
       auto it = std::inserter(container, container.end());

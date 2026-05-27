@@ -68,12 +68,12 @@ inline constexpr I kScaledConstant = I(10 * (I(1) << a) / b + 1);
 
 template <typename Integer>
 char* WriteIntegerToBuffer(char* out, Integer value) {
-  using UInt = axio::T<MakeUnsigned<Integer>>;
+  using UInt = MakeUnsigned_T<Integer>;
 
   // convert bool to int before test with unary + to silence warning if T
   // happens to be bool
   UInt n;
-  if constexpr (IsSigned<Integer>::value) {
+  if constexpr (IsSigned_V<Integer>) {
     if (value < 0) {
       *out++ = '-';
       n = UInt(0) - static_cast<UInt>(value);

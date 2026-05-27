@@ -25,14 +25,11 @@ class Vector : private detail::AllocatorHolder<A> {
   using AllocatorTraits = std::allocator_traits<A>;
 
   template <typename It>
-  using EnableIfForwardIt =
-      typename EnableIf<IsForwardIterator<It>::value, int>::type;
+  using EnableIfForwardIt = EnableIf_T<IsForwardIterator_V<It>, int>;
 
   template <typename It>
   using EnableIfNotForwardIt =
-      typename EnableIf<IsInputIterator<It>::value &&
-                            !IsForwardIterator<It>::value,
-                        int>::type;
+      EnableIf_T<IsInputIterator_V<It> && !IsForwardIterator_V<It>, int>;
 
  public:
   using ValueType = T;
@@ -621,13 +618,13 @@ class Vector : private detail::AllocatorHolder<A> {
   template <typename DstPointer, typename InputIt>
   struct ShouldUseMemcpy {
     using ValueType =
-        axio::T<RemoveCV<typename std::iterator_traits<InputIt>::value_type>>;
-    using DestType = axio::T<
-        RemoveCV<typename std::pointer_traits<DstPointer>::element_type>>;
+        RemoveCV_T<typename std::iterator_traits<InputIt>::value_type>;
+    using DestType =
+        RemoveCV_T<typename std::pointer_traits<DstPointer>::element_type>;
 
-    static constexpr Bool value = Conjunction<IsTriviallyCopyable<DestType>,
-                                              IsSame<DestType, ValueType>,
-                                              IsPointer<InputIt>>::value;
+    static constexpr Bool value = Conjunction_V<IsTriviallyCopyable<DestType>,
+                                                IsSame<DestType, ValueType>,
+                                                IsPointer<InputIt>>;
   };
 
   SizeType ComputeCapacity(SizeType old_capacity, SizeType add_size) {
@@ -702,7 +699,7 @@ class Vector : private detail::AllocatorHolder<A> {
   static void DestroyElements(AllocatorType& allocator,
                               Pointer first,
                               Pointer last) {
-    if constexpr (!axio::V<IsTriviallyCopyConstructible<ValueType>>) {
+    if constexpr (!IsTriviallyCopyConstructible_V<ValueType>) {
       while (first != last) {
         AllocatorTraits::destroy(allocator, first++);
       }
@@ -736,7 +733,7 @@ class Vector : private detail::AllocatorHolder<A> {
   }
 
   template <Bool RETURN_INPUT_IT, typename InputIt>
-  static axio::T<Conditional<RETURN_INPUT_IT, InputIt, void>>
+  static Conditional_T<RETURN_INPUT_IT, InputIt, void>
   CopyAssignElements(Pointer first, Pointer last, InputIt source) {
     using UseMemcpy = ShouldUseMemcpy<Pointer, InputIt>;
     if constexpr (UseMemcpy::value) {
@@ -816,8 +813,8 @@ class Vector : private detail::AllocatorHolder<A> {
                            Pointer first,
                            Pointer last) {
     using DestType =
-        axio::T<RemoveCV<typename std::pointer_traits<Pointer>::element_type>>;
-    if constexpr (IsScalar<ValueType>::value) {
+        RemoveCV_T<typename std::pointer_traits<Pointer>::element_type>;
+    if constexpr (IsScalar_V<ValueType>) {
       std::memset(first, 0,
                   static_cast<SizeType>(last - first) * sizeof(DestType));
     } else {
@@ -840,9 +837,9 @@ class Vector : private detail::AllocatorHolder<A> {
                            Pointer last,
                            ConstReference value) {
     using DestType =
-        axio::T<RemoveCV<typename std::pointer_traits<Pointer>::element_type>>;
+        RemoveCV_T<typename std::pointer_traits<Pointer>::element_type>;
 
-    if constexpr (IsScalar<DestType>::value) {
+    if constexpr (IsScalar_V<DestType>) {
       if (AXIO_LIKELY(value == static_cast<DestType>(0) ||
                       sizeof(DestType) == 1)) {
         std::memset(first, value,
@@ -871,8 +868,8 @@ class Vector : private detail::AllocatorHolder<A> {
                                  Pointer last,
                                  ConstReference value) {
     using DestType =
-        axio::T<RemoveCV<typename std::pointer_traits<Pointer>::element_type>>;
-    if constexpr (IsScalar<DestType>::value) {
+        RemoveCV_T<typename std::pointer_traits<Pointer>::element_type>;
+    if constexpr (IsScalar_V<DestType>) {
       if (AXIO_LIKELY(value == static_cast<DestType>(0) ||
                       sizeof(DestType) == 1)) {
         std::memset(first, value,

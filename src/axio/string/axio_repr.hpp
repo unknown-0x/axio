@@ -57,14 +57,12 @@ void AxioRepr(Output& out, std::string_view sv) {
 
 template <typename Output,
           typename T,
-          axio::T<EnableIf<IsSame<T, const char*>::value, int>> = 0>
+          EnableIf_T<IsSame_V<T, const char*>, int> = 0>
 void AxioRepr(Output& out, T s) {
   out.Append(s, static_cast<SizeT>(std::strlen(s)));
 }
 
-template <typename Output,
-          typename T,
-          axio::T<EnableIf<IsSame<T, char*>::value, int>> = 0>
+template <typename Output, typename T, EnableIf_T<IsSame_V<T, char*>, int> = 0>
 void AxioRepr(Output& out, T s) {
   out.Append(s, static_cast<SizeT>(std::strlen(s)));
 }
@@ -91,10 +89,9 @@ template <typename T>
 using AxioReprOp = decltype(AxioRepr(std::declval<internal::DummyOutput&>(),
                                      std::declval<const T&>()));
 template <typename T>
-using HasAxioRepr = IsDetected<AxioReprOp, T>;
-
-template <typename... Ts>
-inline constexpr Bool kHasAxioReprPack = (HasAxioRepr<Ts>::value && ...);
+struct HasAxioRepr : IsDetected<AxioReprOp, T> {};
+template <typename T>
+inline constexpr auto HasAxioRepr_V = HasAxioRepr<T>::value;
 }  // namespace axio
 
 #endif

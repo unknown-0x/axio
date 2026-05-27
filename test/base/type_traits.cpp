@@ -5,40 +5,6 @@
 #include <tuple>
 #include <vector>
 
-TEST_CASE(TypeTraits, TraitType) {
-  IGNORE_RESULT();
-
-  struct NormalTrait {
-    using type = int;
-  };
-  static_assert(axio::IsSame<axio::T<NormalTrait>, int>::value, "");
-
-  struct ComplexTrait {
-    using type = std::pair<int, float>;
-  };
-  static_assert(
-      axio::IsSame<axio::T<ComplexTrait>, std::pair<int, float>>::value, "");
-
-  struct ConstTypeTrait {
-    using type = const int;
-  };
-  static_assert(axio::IsSame<axio::T<ConstTypeTrait>, const int>::value, "");
-
-  struct ReferenceTypeTrait {
-    using type = int&;
-  };
-  static_assert(axio::IsSame<axio::T<ReferenceTypeTrait>, int&>::value, "");
-
-  struct VolatileTypeTrait {
-    using type = volatile int;
-  };
-  static_assert(axio::IsSame<axio::T<VolatileTypeTrait>, volatile int>::value,
-                "");
-
-  static_assert(axio::IsSame<axio::T<axio::RemoveConst<const int>>, int>::value,
-                "");
-}
-
 enum class Flag { A = 1, B = 2 };
 
 struct EnumValueTrait {
@@ -46,59 +12,48 @@ struct EnumValueTrait {
   static constexpr Flag value = Flag::B;
 };
 
-TEST_CASE(TypeTraits, TraitValue) {
-  IGNORE_RESULT();
-
-  static_assert(!axio::V<axio::IsClass<int>>, "");
-  static_assert(axio::V<axio::IsIntegral<int>>, "");
-  static_assert(axio::V<axio::Rank<int>> == 0, "");
-  static_assert(axio::V<axio::Rank<int[1][1][1]>> == 3, "");
-
-  static_assert(axio::V<EnumValueTrait> == Flag::B, "");
-}
-
 TEST_CASE(TypeTraits, IsBoundedArray) {
   IGNORE_RESULT();
   struct Type {};
-  static_assert(!axio::V<axio::IsBoundedArray<Type>>, "");
-  static_assert(!axio::V<axio::IsBoundedArray<Type[]>>, "");
-  static_assert(axio::V<axio::IsBoundedArray<Type[3]>>, "");
+  static_assert(!axio::IsBoundedArray_V<Type>, "");
+  static_assert(!axio::IsBoundedArray_V<Type[]>, "");
+  static_assert(axio::IsBoundedArray_V<Type[3]>, "");
 
-  static_assert(!axio::V<axio::IsBoundedArray<int>>, "");
-  static_assert(!axio::V<axio::IsBoundedArray<float>>, "");
-  static_assert(!axio::V<axio::IsBoundedArray<int[]>>, "");
-  static_assert(axio::V<axio::IsBoundedArray<int[3]>>, "");
-  static_assert(axio::V<axio::IsBoundedArray<int[3][4]>>, "");
-  static_assert(axio::V<axio::IsBoundedArray<int[3][4][5]>>, "");
-  static_assert(axio::V<axio::IsBoundedArray<const int[3]>>, "");
-  static_assert(axio::V<axio::IsBoundedArray<volatile int[3]>>, "");
-  static_assert(axio::V<axio::IsBoundedArray<const volatile int[3]>>, "");
+  static_assert(!axio::IsBoundedArray_V<int>, "");
+  static_assert(!axio::IsBoundedArray_V<float>, "");
+  static_assert(!axio::IsBoundedArray_V<int[]>, "");
+  static_assert(axio::IsBoundedArray_V<int[3]>, "");
+  static_assert(axio::IsBoundedArray_V<int[3][4]>, "");
+  static_assert(axio::IsBoundedArray_V<int[3][4][5]>, "");
+  static_assert(axio::IsBoundedArray_V<const int[3]>, "");
+  static_assert(axio::IsBoundedArray_V<volatile int[3]>, "");
+  static_assert(axio::IsBoundedArray_V<const volatile int[3]>, "");
 
-  static_assert(!axio::V<axio::IsBoundedArray<int*>>, "");
-  static_assert(!axio::V<axio::IsBoundedArray<int&>>, "");
-  static_assert(!axio::V<axio::IsBoundedArray<int&&>>, "");
+  static_assert(!axio::IsBoundedArray_V<int*>, "");
+  static_assert(!axio::IsBoundedArray_V<int&>, "");
+  static_assert(!axio::IsBoundedArray_V<int&&>, "");
 }
 
 TEST_CASE(TypeTraits, IsUnboundedArray) {
   IGNORE_RESULT();
   struct Type {};
-  static_assert(!axio::V<axio::IsUnboundedArray<Type>>, "");
-  static_assert(!axio::V<axio::IsUnboundedArray<Type[3]>>, "");
-  static_assert(axio::V<axio::IsUnboundedArray<Type[]>>, "");
+  static_assert(!axio::IsUnboundedArray_V<Type>, "");
+  static_assert(!axio::IsUnboundedArray_V<Type[3]>, "");
+  static_assert(axio::IsUnboundedArray_V<Type[]>, "");
 
-  static_assert(!axio::V<axio::IsUnboundedArray<int>>, "");
-  static_assert(!axio::V<axio::IsUnboundedArray<float>>, "");
-  static_assert(!axio::V<axio::IsUnboundedArray<int[3]>>, "");
-  static_assert(!axio::V<axio::IsUnboundedArray<int[3][4]>>, "");
-  static_assert(!axio::V<axio::IsUnboundedArray<int[3][4][5]>>, "");
-  static_assert(axio::V<axio::IsUnboundedArray<int[]>>, "");
-  static_assert(axio::V<axio::IsUnboundedArray<const int[]>>, "");
-  static_assert(axio::V<axio::IsUnboundedArray<volatile int[]>>, "");
-  static_assert(axio::V<axio::IsUnboundedArray<const volatile int[]>>, "");
+  static_assert(!axio::IsUnboundedArray_V<int>, "");
+  static_assert(!axio::IsUnboundedArray_V<float>, "");
+  static_assert(!axio::IsUnboundedArray_V<int[3]>, "");
+  static_assert(!axio::IsUnboundedArray_V<int[3][4]>, "");
+  static_assert(!axio::IsUnboundedArray_V<int[3][4][5]>, "");
+  static_assert(axio::IsUnboundedArray_V<int[]>, "");
+  static_assert(axio::IsUnboundedArray_V<const int[]>, "");
+  static_assert(axio::IsUnboundedArray_V<volatile int[]>, "");
+  static_assert(axio::IsUnboundedArray_V<const volatile int[]>, "");
 
-  static_assert(!axio::V<axio::IsUnboundedArray<int*>>, "");
-  static_assert(!axio::V<axio::IsUnboundedArray<int&>>, "");
-  static_assert(!axio::V<axio::IsUnboundedArray<int&&>>, "");
+  static_assert(!axio::IsUnboundedArray_V<int*>, "");
+  static_assert(!axio::IsUnboundedArray_V<int&>, "");
+  static_assert(!axio::IsUnboundedArray_V<int&&>, "");
 }
 
 template <typename T, typename U>
@@ -108,85 +63,63 @@ struct Pair {
 };
 
 template <typename T>
-constexpr axio::T<axio::EnableIf<std::is_integral_v<T>, int>> SFINAETest(T) {
+constexpr axio::EnableIf_T<std::is_integral_v<T>, int> SFINAETest(T) {
   return 1;
 }
 
 // Disabled overload (non-integral)
 template <typename T>
-constexpr axio::T<axio::EnableIf<!std::is_integral_v<T>, int>> SFINAETest(T) {
+constexpr axio::EnableIf_T<!std::is_integral_v<T>, int> SFINAETest(T) {
   return 2;
 }
 
 TEST_CASE(TypeTraits, EnableIf) {
   IGNORE_RESULT();
-  static_assert(axio::IsSame<axio::T<axio::EnableIf<true, int>>, int>::value,
+  static_assert(axio::IsSame_V<axio::EnableIf_T<true, int>, int>, "");
+  static_assert(axio::IsSame_V<axio::EnableIf_T<true, double>, double>, "");
+  static_assert(axio::IsSame_V<axio::EnableIf_T<true>, void>, "");
+  static_assert(axio::IsSame_V<axio::EnableIf_T<true, Pair<int, float>>,
+                               Pair<int, float>>,
+                "");
+  static_assert(axio::IsSame_V<axio::EnableIf_T<true, const int>, const int>,
                 "");
   static_assert(
-      axio::IsSame<axio::T<axio::EnableIf<true, double>>, double>::value, "");
-  static_assert(axio::IsSame<axio::T<axio::EnableIf<true>>, void>::value, "");
-  static_assert(axio::IsSame<axio::T<axio::EnableIf<true, Pair<int, float>>>,
-                             Pair<int, float>>::value,
-                "");
-  static_assert(
-      axio::IsSame<axio::T<axio::EnableIf<true, const int>>, const int>::value,
-      "");
-  static_assert(axio::IsSame<axio::T<axio::EnableIf<true, volatile int>>,
-                             volatile int>::value,
-                "");
-  static_assert(axio::IsSame<axio::T<axio::EnableIf<true, int&>>, int&>::value,
-                "");
-  static_assert(
-      axio::IsSame<axio::T<axio::EnableIf<true, int&&>>, int&&>::value, "");
-  static_assert(axio::IsSame<axio::T<axio::EnableIf<true, int*>>, int*>::value,
-                "");
-  static_assert(
-      axio::IsSame<axio::T<axio::EnableIf<true, int[5]>>, int[5]>::value, "");
+      axio::IsSame_V<axio::EnableIf_T<true, volatile int>, volatile int>, "");
+  static_assert(axio::IsSame_V<axio::EnableIf_T<true, int&>, int&>, "");
+  static_assert(axio::IsSame_V<axio::EnableIf_T<true, int&&>, int&&>, "");
+  static_assert(axio::IsSame_V<axio::EnableIf_T<true, int*>, int*>, "");
+  static_assert(axio::IsSame_V<axio::EnableIf_T<true, int[5]>, int[5]>, "");
   static_assert(SFINAETest(10) == 1, "");
   static_assert(SFINAETest(3.14) == 2, "");
 }
 
 TEST_CASE(TypeTraits, TypeIdentity) {
   IGNORE_RESULT();
-  static_assert(axio::IsSame<axio::T<axio::TypeIdentity<int>>, int>::value, "");
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<int>, int>, "");
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<double>, double>, "");
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<void>, void>, "");
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<const int>, const int>, "");
   static_assert(
-      axio::IsSame<axio::T<axio::TypeIdentity<double>>, double>::value, "");
-  static_assert(axio::IsSame<axio::T<axio::TypeIdentity<void>>, void>::value,
-                "");
-  static_assert(
-      axio::IsSame<axio::T<axio::TypeIdentity<const int>>, const int>::value,
-      "");
-  static_assert(axio::IsSame<axio::T<axio::TypeIdentity<volatile int>>,
-                             volatile int>::value,
-                "");
-  static_assert(axio::IsSame<axio::T<axio::TypeIdentity<const volatile int>>,
-                             const volatile int>::value,
+      axio::IsSame_V<axio::TypeIdentity_T<volatile int>, volatile int>, "");
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<const volatile int>,
+                               const volatile int>,
                 "");
 
-  static_assert(axio::IsSame<axio::T<axio::TypeIdentity<int&>>, int&>::value,
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<int&>, int&>, "");
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<int&&>, int&&>, "");
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<const int&>, const int&>,
                 "");
-  static_assert(axio::IsSame<axio::T<axio::TypeIdentity<int&&>>, int&&>::value,
-                "");
-  static_assert(
-      axio::IsSame<axio::T<axio::TypeIdentity<const int&>>, const int&>::value,
-      "");
 
-  static_assert(axio::IsSame<axio::T<axio::TypeIdentity<int*>>, int*>::value,
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<int*>, int*>, "");
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<const int*>, const int*>,
                 "");
-  static_assert(
-      axio::IsSame<axio::T<axio::TypeIdentity<const int*>>, const int*>::value,
-      "");
-  static_assert(
-      axio::IsSame<axio::T<axio::TypeIdentity<int* const>>, int* const>::value,
-      "");
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<int* const>, int* const>,
+                "");
 
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<int[5]>, int[5]>, "");
   static_assert(
-      axio::IsSame<axio::T<axio::TypeIdentity<int[5]>>, int[5]>::value, "");
-  static_assert(axio::IsSame<axio::T<axio::TypeIdentity<const int[3]>>,
-                             const int[3]>::value,
-                "");
-  static_assert(axio::IsSame<axio::T<axio::TypeIdentity<int[]>>, int[]>::value,
-                "");
+      axio::IsSame_V<axio::TypeIdentity_T<const int[3]>, const int[3]>, "");
+  static_assert(axio::IsSame_V<axio::TypeIdentity_T<int[]>, int[]>, "");
 }
 
 template <typename... Ts>
@@ -195,38 +128,30 @@ struct MyTemplate {};
 TEST_CASE(TypeTraits, IsSpecializationOf) {
   IGNORE_RESULT();
 
-  static_assert(axio::IsSpecializationOf<std::vector<int>, std::vector>::value,
+  static_assert(axio::IsSpecializationOf_V<std::vector<int>, std::vector>, "");
+  static_assert(axio::IsSpecializationOf_V<std::vector<double>, std::vector>,
                 "");
+  static_assert(axio::IsSpecializationOf_V<std::tuple<int>, std::tuple>, "");
   static_assert(
-      axio::IsSpecializationOf<std::vector<double>, std::vector>::value, "");
-  static_assert(axio::IsSpecializationOf<std::tuple<int>, std::tuple>::value,
-                "");
-  static_assert(
-      axio::IsSpecializationOf<std::tuple<int, float, char>, std::tuple>::value,
-      "");
+      axio::IsSpecializationOf_V<std::tuple<int, float, char>, std::tuple>, "");
 
-  static_assert(axio::IsSpecializationOf<MyTemplate<int>, MyTemplate>::value,
+  static_assert(axio::IsSpecializationOf_V<MyTemplate<int>, MyTemplate>, "");
+  static_assert(axio::IsSpecializationOf_V<MyTemplate<int, double>, MyTemplate>,
                 "");
-  static_assert(
-      axio::IsSpecializationOf<MyTemplate<int, double>, MyTemplate>::value, "");
-  static_assert(axio::IsSpecializationOf<MyTemplate<>, MyTemplate>::value, "");
+  static_assert(axio::IsSpecializationOf_V<MyTemplate<>, MyTemplate>, "");
 
-  static_assert(!axio::IsSpecializationOf<int, std::vector>::value, "");
-  static_assert(!axio::IsSpecializationOf<double, std::tuple>::value, "");
-  static_assert(!axio::IsSpecializationOf<std::vector<int>, std::tuple>::value,
-                "");
-  static_assert(!axio::IsSpecializationOf<std::tuple<int>, std::vector>::value,
-                "");
+  static_assert(!axio::IsSpecializationOf_V<int, std::vector>, "");
+  static_assert(!axio::IsSpecializationOf_V<double, std::tuple>, "");
+  static_assert(!axio::IsSpecializationOf_V<std::vector<int>, std::tuple>, "");
+  static_assert(!axio::IsSpecializationOf_V<std::tuple<int>, std::vector>, "");
 
   static_assert(
-      !axio::IsSpecializationOf<const std::vector<int>, std::vector>::value,
-      "");
+      !axio::IsSpecializationOf_V<const std::vector<int>, std::vector>, "");
   static_assert(
-      !axio::IsSpecializationOf<volatile std::vector<int>, std::vector>::value,
+      !axio::IsSpecializationOf_V<volatile std::vector<int>, std::vector>, "");
+  static_assert(
+      !axio::IsSpecializationOf_V<const volatile std::vector<int>, std::vector>,
       "");
-  static_assert(!axio::IsSpecializationOf<const volatile std::vector<int>,
-                                          std::vector>::value,
-                "");
 }
 
 struct Incomplete;
@@ -234,19 +159,20 @@ struct Complete {};
 struct LateComplete;
 struct LateComplete {};
 struct Abstract {
+  virtual ~Abstract() = default;
   virtual void Foo() = 0;
 };
 TEST_CASE(TypeTraits, IsComplete) {
   IGNORE_RESULT();
-  static_assert(axio::IsComplete<int>::value, "");
-  static_assert(axio::IsComplete<double>::value, "");
-  static_assert(axio::IsComplete<char>::value, "");
-  static_assert(axio::IsComplete<Complete>::value, "");
-  static_assert(axio::IsComplete<Abstract>::value, "");
-  static_assert(axio::IsComplete<LateComplete>::value, "");
+  static_assert(axio::IsComplete_V<int>, "");
+  static_assert(axio::IsComplete_V<double>, "");
+  static_assert(axio::IsComplete_V<char>, "");
+  static_assert(axio::IsComplete_V<Complete>, "");
+  static_assert(axio::IsComplete_V<Abstract>, "");
+  static_assert(axio::IsComplete_V<LateComplete>, "");
 
-  static_assert(!axio::IsComplete<Incomplete>::value, "");
-  static_assert(axio::IsComplete<Incomplete*>::value, "");
+  static_assert(!axio::IsComplete_V<Incomplete>, "");
+  static_assert(axio::IsComplete_V<Incomplete*>, "");
 }
 
 struct HasType {
@@ -265,19 +191,18 @@ using PlusOp = decltype(std::declval<T>() + std::declval<U>());
 
 TEST_CASE(TypeTraits, IsDetected) {
   IGNORE_RESULT();
-  static_assert(axio::IsDetected<TypeMemberOp, HasType>::value, "");
-  static_assert(!axio::IsDetected<TypeMemberOp, NoType>::value, "");
+  static_assert(axio::IsDetected_V<TypeMemberOp, HasType>, "");
+  static_assert(!axio::IsDetected_V<TypeMemberOp, NoType>, "");
 
-  static_assert(axio::IsDetected<PushBackOp, std::vector<int>>::value, "");
-  static_assert(!axio::IsDetected<PushBackOp, int>::value, "");
+  static_assert(axio::IsDetected_V<PushBackOp, std::vector<int>>, "");
+  static_assert(!axio::IsDetected_V<PushBackOp, int>, "");
 
-  static_assert(!axio::IsDetected<ConstPushBackOp, std::vector<int>>::value,
+  static_assert(!axio::IsDetected_V<ConstPushBackOp, std::vector<int>>, "");
+
+  static_assert(axio::IsDetected_V<PlusOp, int, int>, "");
+  static_assert(axio::IsDetected_V<PlusOp, double, float>, "");
+  static_assert(!axio::IsDetected_V<PlusOp, std::vector<int>, std::vector<int>>,
                 "");
-
-  static_assert(axio::IsDetected<PlusOp, int, int>::value, "");
-  static_assert(axio::IsDetected<PlusOp, double, float>::value, "");
-  static_assert(
-      !axio::IsDetected<PlusOp, std::vector<int>, std::vector<int>>::value, "");
 }
 
 TEST_CASE(TypeTraits, IsEqualityComparable) {
@@ -287,18 +212,16 @@ TEST_CASE(TypeTraits, IsEqualityComparable) {
     bool operator==(const Foo&) const { return true; }
   };
 
-  static_assert(axio::IsEqualityComparable<int>::value, "");
-  static_assert(axio::IsEqualityComparable<Foo>::value, "");
-  static_assert(axio::IsEqualityComparable<int, int>::value, "");
-  static_assert(axio::IsEqualityComparable<double>::value, "");
-  static_assert(axio::IsEqualityComparable<int, double>::value, "");
-  static_assert(axio::IsEqualityComparable<char, int>::value, "");
+  static_assert(axio::IsEqualityComparable_V<int>, "");
+  static_assert(axio::IsEqualityComparable_V<Foo>, "");
+  static_assert(axio::IsEqualityComparable_V<int, int>, "");
+  static_assert(axio::IsEqualityComparable_V<double>, "");
+  static_assert(axio::IsEqualityComparable_V<int, double>, "");
+  static_assert(axio::IsEqualityComparable_V<char, int>, "");
 
-  static_assert(axio::IsEqualityComparable<std::string>::value, "");
-  static_assert(axio::IsEqualityComparable<std::string, const char*>::value,
-                "");
-  static_assert(axio::IsEqualityComparable<const char*, std::string>::value,
-                "");
+  static_assert(axio::IsEqualityComparable_V<std::string>, "");
+  static_assert(axio::IsEqualityComparable_V<std::string, const char*>, "");
+  static_assert(axio::IsEqualityComparable_V<const char*, std::string>, "");
 }
 
 struct NoCompare {};
@@ -316,40 +239,39 @@ inline bool operator>(const FullCompare& a, const FullCompare& b) {
 
 TEST_CASE(TypeTraits, IsLessThanComparable) {
   IGNORE_RESULT();
-  static_assert(axio::IsLessThanComparable<int>::value, "");
-  static_assert(axio::IsLessThanComparable<int, double>::value, "");
-  static_assert(axio::IsLessThanComparable<char, int>::value, "");
+  static_assert(axio::IsLessThanComparable_V<int>, "");
+  static_assert(axio::IsLessThanComparable_V<int, double>, "");
+  static_assert(axio::IsLessThanComparable_V<char, int>, "");
 
-  static_assert(!axio::IsLessThanComparable<void>::value, "");
-  static_assert(!axio::IsLessThanComparable<int, void>::value, "");
-  static_assert(!axio::IsLessThanComparable<NoCompare>::value, "");
-  static_assert(axio::IsLessThanComparable<FullCompare>::value, "");
+  static_assert(!axio::IsLessThanComparable_V<void>, "");
+  static_assert(!axio::IsLessThanComparable_V<int, void>, "");
+  static_assert(!axio::IsLessThanComparable_V<NoCompare>, "");
+  static_assert(axio::IsLessThanComparable_V<FullCompare>, "");
 }
 
 TEST_CASE(TypeTraits, IsGreaterThanComparable) {
   IGNORE_RESULT();
-  static_assert(axio::IsGreaterThanComparable<int>::value, "");
-  static_assert(axio::IsGreaterThanComparable<double, int>::value, "");
-  static_assert(axio::IsGreaterThanComparable<long, short>::value, "");
+  static_assert(axio::IsGreaterThanComparable_V<int>, "");
+  static_assert(axio::IsGreaterThanComparable_V<double, int>, "");
+  static_assert(axio::IsGreaterThanComparable_V<long, short>, "");
 
-  static_assert(!axio::IsGreaterThanComparable<void>::value, "");
-  static_assert(!axio::IsGreaterThanComparable<void, int>::value, "");
-  static_assert(!axio::IsGreaterThanComparable<NoCompare>::value, "");
-  static_assert(axio::IsGreaterThanComparable<FullCompare>::value, "");
+  static_assert(!axio::IsGreaterThanComparable_V<void>, "");
+  static_assert(!axio::IsGreaterThanComparable_V<void, int>, "");
+  static_assert(!axio::IsGreaterThanComparable_V<NoCompare>, "");
+  static_assert(axio::IsGreaterThanComparable_V<FullCompare>, "");
 }
 
 TEST_CASE(TypeTraits, ShouldUseEBO) {
   IGNORE_RESULT();
-
   struct Empty {};
   struct FinalEmpty final {};
   struct NonEmpty {
     int x;
   };
 
-  static_assert(axio::ShouldUseEBO<Empty>::value, "");
+  static_assert(axio::ShouldUseEBO_V<Empty>, "");
 
-  static_assert(!axio::ShouldUseEBO<FinalEmpty>::value, "");
-  static_assert(!axio::ShouldUseEBO<NonEmpty>::value, "");
-  static_assert(!axio::ShouldUseEBO<int>::value, "");
+  static_assert(!axio::ShouldUseEBO_V<FinalEmpty>, "");
+  static_assert(!axio::ShouldUseEBO_V<NonEmpty>, "");
+  static_assert(!axio::ShouldUseEBO_V<int>, "");
 }

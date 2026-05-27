@@ -12,18 +12,16 @@ TEST_CASE(Allocator, StdAllocatorTraitsCompatibility) {
 
   using Traits = std::allocator_traits<axio::Allocator<int>>;
 
-  static_assert(
-      axio::V<axio::IsSame<Traits::allocator_type, axio::Allocator<int>>>, "");
+  static_assert(axio::IsSame_V<Traits::allocator_type, axio::Allocator<int>>,
+                "");
 
-  static_assert(axio::V<axio::IsSame<Traits::value_type, int>>, "");
-  static_assert(axio::V<axio::IsSame<Traits::pointer, int*>>, "");
-  static_assert(axio::V<axio::IsSame<Traits::const_pointer, const int*>>, "");
-  static_assert(axio::V<axio::IsSame<Traits::void_pointer, void*>>, "");
-  static_assert(axio::V<axio::IsSame<Traits::const_void_pointer, const void*>>,
-                "");
-  static_assert(axio::V<axio::IsSame<Traits::difference_type, std::ptrdiff_t>>,
-                "");
-  static_assert(axio::V<axio::IsSame<Traits::size_type, std::size_t>>, "");
+  static_assert(axio::IsSame_V<Traits::value_type, int>, "");
+  static_assert(axio::IsSame_V<Traits::pointer, int*>, "");
+  static_assert(axio::IsSame_V<Traits::const_pointer, const int*>, "");
+  static_assert(axio::IsSame_V<Traits::void_pointer, void*>, "");
+  static_assert(axio::IsSame_V<Traits::const_void_pointer, const void*>, "");
+  static_assert(axio::IsSame_V<Traits::difference_type, std::ptrdiff_t>, "");
+  static_assert(axio::IsSame_V<Traits::size_type, std::size_t>, "");
 }
 
 TEST_CASE(Allocator, BasicTest) {

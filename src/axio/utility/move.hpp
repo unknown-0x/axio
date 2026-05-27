@@ -5,8 +5,8 @@
 
 namespace axio {
 template <typename T>
-constexpr axio::T<RemoveReference<T>>&& Move(T&& value) noexcept {
-  return static_cast<axio::T<RemoveReference<T>>&&>(value);
+constexpr RemoveReference_T<T>&& Move(T&& value) noexcept {
+  return static_cast<RemoveReference_T<T>&&>(value);
 }
 }  // namespace axio
 
