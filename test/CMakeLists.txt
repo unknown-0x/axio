@@ -37,8 +37,10 @@ axio_test(
 
 axio_test(
     utility_test
+    utility/defer.cpp
     utility/forward.cpp
     utility/move.cpp
+    utility/strong_type.cpp
 )
 
 axio_test(
