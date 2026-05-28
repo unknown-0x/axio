@@ -676,4 +676,40 @@ template <typename T>
 using UnwrapReferenceWrapper_T = typename UnwrapReferenceWrapper<T>::type;
 }  // namespace axio
 
+#define AXIO_DEFINE_ENUM_BITWISE(Enum)                                   \
+  constexpr Enum operator~(Enum value) {                                 \
+    using U = axio::UnderlyingType_T<Enum>;                              \
+    return static_cast<Enum>(~static_cast<U>(value));                    \
+  }                                                                      \
+                                                                         \
+  constexpr Enum operator|(Enum lhs, Enum rhs) {                         \
+    using U = axio::UnderlyingType_T<Enum>;                              \
+    return static_cast<Enum>(static_cast<U>(lhs) | static_cast<U>(rhs)); \
+  }                                                                      \
+                                                                         \
+  constexpr Enum operator&(Enum lhs, Enum rhs) {                         \
+    using U = axio::UnderlyingType_T<Enum>;                              \
+    return static_cast<Enum>(static_cast<U>(lhs) & static_cast<U>(rhs)); \
+  }                                                                      \
+                                                                         \
+  constexpr Enum operator^(Enum lhs, Enum rhs) {                         \
+    using U = axio::UnderlyingType_T<Enum>;                              \
+    return static_cast<Enum>(static_cast<U>(lhs) ^ static_cast<U>(rhs)); \
+  }                                                                      \
+                                                                         \
+  constexpr Enum& operator|=(Enum& lhs, Enum rhs) {                      \
+    lhs = lhs | rhs;                                                     \
+    return lhs;                                                          \
+  }                                                                      \
+                                                                         \
+  constexpr Enum& operator&=(Enum& lhs, Enum rhs) {                      \
+    lhs = lhs & rhs;                                                     \
+    return lhs;                                                          \
+  }                                                                      \
+                                                                         \
+  constexpr Enum& operator^=(Enum& lhs, Enum rhs) {                      \
+    lhs = lhs ^ rhs;                                                     \
+    return lhs;                                                          \
+  }
+
 #endif
