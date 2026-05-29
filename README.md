@@ -189,6 +189,82 @@ int main() {
   return 0;
 }
 ```
+
+```c++
+#include <axio/string/string.hpp>
+#include <axio/utility/result.hpp>
+
+#include <iostream>
+
+axio::Result<int, axio::String> Divide(int a, int b) {
+  if (b == 0) {
+    return axio::Error("Division by zero");
+  }
+  return axio::Ok(a / b);
+}
+
+void TryDivide(int a, int b) {
+  auto result = Divide(a, b);
+
+  if (result) {
+    std::cout << a << '/' << b << '=' << *result << '\n';
+  } else {
+    std::cout << "Error: " << result.GetError().CStr() << '\n';
+  }
+}
+
+int main() {
+  TryDivide(10, 2); // 10/2=5
+  TryDivide(10, 0); // Error: Division by zero
+  return 0;
+}
+```
+
+```c++
+#include <axio/utility/result.hpp>
+
+#include <iostream>
+#include <string>
+
+using Result = axio::Result<int, std::string>;
+
+Result Parse(const std::string& s) {
+  if (s.empty()) {
+    return axio::Error("Empty string");
+  }
+  return axio::Ok(std::stoi(s));
+}
+
+Result Reciprocal(int x) {
+  if (x == 0) {
+    return axio::Error("Division by zero");
+  }
+  return axio::Ok(100 / x);
+}
+
+Result AddFive(int x) {
+  return axio::Ok(x + 5);
+}
+
+void TryParse(const std::string& s) {
+  auto result =
+      Parse(s).Then(Reciprocal).Then(AddFive).Map([](int x) { return x * 2; });
+
+  if (result) {
+    std::cout << *result << '\n';
+  } else {
+    std::cout << result.GetError() << '\n';
+  }
+}
+
+int main() {
+  TryParse("20");  // 20
+  TryParse("0");   // Division by zero
+  TryParse("");    // Empty string
+  return 0;
+}
+
+```
 ---
 
 ## Integration
