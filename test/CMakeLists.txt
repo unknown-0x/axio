@@ -40,6 +40,7 @@ axio_test(
     utility/defer.cpp
     utility/forward.cpp
     utility/move.cpp
+    utility/result.cpp
     utility/strong_type.cpp
 )
 
