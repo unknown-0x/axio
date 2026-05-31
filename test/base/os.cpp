@@ -27,8 +27,6 @@ TEST_CASE(OS, IsWindowsX86) {
 
 #elif defined(AXIO_OS_APPLE)
 TEST_CASE(OS, IsApple) {
-  IGNORE_RESULT();
-
   CHECK_EQ(AXIO_OS_APPLE, 1);
   CHECK_EQ(AXIO_OS_POSIX, 1);
 
@@ -51,7 +49,6 @@ TEST_CASE(OS, IsApple) {
 
 #elif defined(AXIO_OS_LINUX)
 TEST_CASE(OS, IsLinux) {
-  IGNORE_RESULT();
   CHECK_EQ(AXIO_OS_LINUX, 1);
   CHECK_EQ(AXIO_OS_POSIX, 1);
   CHECK_STR_EQ(AXIO_OS_NAME, "linux");
@@ -59,7 +56,6 @@ TEST_CASE(OS, IsLinux) {
 
 #elif defined(AXIO_OS_POSIX)
 TEST_CASE(OS, IsPosix) {
-  IGNORE_RESULT();
   CHECK_EQ(AXIO_OS_POSIX, 1);
   CHECK_STR_EQ(AXIO_OS_NAME, "posix");
 }
