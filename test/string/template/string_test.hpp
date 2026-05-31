@@ -877,8 +877,6 @@ STRING_TEST_CASE(String, Resize) {
 }
 
 STRING_TEST_CASE(String, Reserve_Shrink) {
-  IGNORE_RESULT();
-
   struct RSTestCase {
     const CHAR* text;
     const SizeType size;
@@ -946,8 +944,6 @@ STRING_TEST_CASE(String, Reserve_Shrink) {
 }
 
 STRING_TEST_CASE(String, Push) {
-  IGNORE_RESULT();
-
   using string = std::basic_string<CHAR>;
   {
     string s1;
@@ -1781,8 +1777,6 @@ STRING_TEST_CASE(String, InsertInputIt) {
 }
 
 STRING_TEST_CASE(String, Insert_Char) {
-  IGNORE_RESULT();
-
   String s;
 
   auto it = s.Insert(s.begin(), TEXT('S'));

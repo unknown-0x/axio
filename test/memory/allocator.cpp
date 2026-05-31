@@ -8,8 +8,6 @@
 #include <vector>
 
 TEST_CASE(Allocator, StdAllocatorTraitsCompatibility) {
-  IGNORE_RESULT();
-
   using Traits = std::allocator_traits<axio::Allocator<int>>;
 
   static_assert(axio::IsSame_V<Traits::allocator_type, axio::Allocator<int>>,

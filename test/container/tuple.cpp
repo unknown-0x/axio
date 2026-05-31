@@ -1105,7 +1105,6 @@ TEST_CASE(Tuple, TupleCat_MixedValueCategories) {
 }
 
 TEST_CASE(Tuple, TupleCat_ReferenceDecayCheck) {
-  IGNORE_RESULT();
   int x = 10;
   auto t = TupleCat(ForwardAsTuple(x));
   static_assert(axio::IsLvalueReference<decltype(Get<0>(t))>::value, "");

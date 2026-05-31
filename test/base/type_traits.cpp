@@ -13,7 +13,6 @@ struct EnumValueTrait {
 };
 
 TEST_CASE(TypeTraits, IsBoundedArray) {
-  IGNORE_RESULT();
   struct Type {};
   static_assert(!axio::IsBoundedArray_V<Type>, "");
   static_assert(!axio::IsBoundedArray_V<Type[]>, "");
@@ -35,7 +34,6 @@ TEST_CASE(TypeTraits, IsBoundedArray) {
 }
 
 TEST_CASE(TypeTraits, IsUnboundedArray) {
-  IGNORE_RESULT();
   struct Type {};
   static_assert(!axio::IsUnboundedArray_V<Type>, "");
   static_assert(!axio::IsUnboundedArray_V<Type[3]>, "");
@@ -74,7 +72,6 @@ constexpr axio::EnableIf_T<!std::is_integral_v<T>, int> SFINAETest(T) {
 }
 
 TEST_CASE(TypeTraits, EnableIf) {
-  IGNORE_RESULT();
   static_assert(axio::IsSame_V<axio::EnableIf_T<true, int>, int>, "");
   static_assert(axio::IsSame_V<axio::EnableIf_T<true, double>, double>, "");
   static_assert(axio::IsSame_V<axio::EnableIf_T<true>, void>, "");
@@ -94,7 +91,6 @@ TEST_CASE(TypeTraits, EnableIf) {
 }
 
 TEST_CASE(TypeTraits, TypeIdentity) {
-  IGNORE_RESULT();
   static_assert(axio::IsSame_V<axio::TypeIdentity_T<int>, int>, "");
   static_assert(axio::IsSame_V<axio::TypeIdentity_T<double>, double>, "");
   static_assert(axio::IsSame_V<axio::TypeIdentity_T<void>, void>, "");
@@ -126,8 +122,6 @@ template <typename... Ts>
 struct MyTemplate {};
 
 TEST_CASE(TypeTraits, IsSpecializationOf) {
-  IGNORE_RESULT();
-
   static_assert(axio::IsSpecializationOf_V<std::vector<int>, std::vector>, "");
   static_assert(axio::IsSpecializationOf_V<std::vector<double>, std::vector>,
                 "");
@@ -163,7 +157,6 @@ struct Abstract {
   virtual void Foo() = 0;
 };
 TEST_CASE(TypeTraits, IsComplete) {
-  IGNORE_RESULT();
   static_assert(axio::IsComplete_V<int>, "");
   static_assert(axio::IsComplete_V<double>, "");
   static_assert(axio::IsComplete_V<char>, "");
@@ -190,7 +183,6 @@ template <typename T, typename U>
 using PlusOp = decltype(std::declval<T>() + std::declval<U>());
 
 TEST_CASE(TypeTraits, IsDetected) {
-  IGNORE_RESULT();
   static_assert(axio::IsDetected_V<TypeMemberOp, HasType>, "");
   static_assert(!axio::IsDetected_V<TypeMemberOp, NoType>, "");
 
@@ -206,8 +198,6 @@ TEST_CASE(TypeTraits, IsDetected) {
 }
 
 TEST_CASE(TypeTraits, IsEqualityComparable) {
-  IGNORE_RESULT();
-
   struct Foo {
     bool operator==(const Foo&) const { return true; }
   };
@@ -238,7 +228,6 @@ inline bool operator>(const FullCompare& a, const FullCompare& b) {
 }
 
 TEST_CASE(TypeTraits, IsLessThanComparable) {
-  IGNORE_RESULT();
   static_assert(axio::IsLessThanComparable_V<int>, "");
   static_assert(axio::IsLessThanComparable_V<int, double>, "");
   static_assert(axio::IsLessThanComparable_V<char, int>, "");
@@ -250,7 +239,6 @@ TEST_CASE(TypeTraits, IsLessThanComparable) {
 }
 
 TEST_CASE(TypeTraits, IsGreaterThanComparable) {
-  IGNORE_RESULT();
   static_assert(axio::IsGreaterThanComparable_V<int>, "");
   static_assert(axio::IsGreaterThanComparable_V<double, int>, "");
   static_assert(axio::IsGreaterThanComparable_V<long, short>, "");
@@ -262,7 +250,6 @@ TEST_CASE(TypeTraits, IsGreaterThanComparable) {
 }
 
 TEST_CASE(TypeTraits, ShouldUseEBO) {
-  IGNORE_RESULT();
   struct Empty {};
   struct FinalEmpty final {};
   struct NonEmpty {

@@ -3,8 +3,6 @@
 #include <axio/base/macros.hpp>
 
 TEST_CASE(Macros, ArraySize) {
-  IGNORE_RESULT();
-
   {
     int arr[5];
     static_assert(AXIO_ARRAY_SIZE(arr) == 5, "Array size should be 5");
@@ -36,8 +34,6 @@ TEST_CASE(Macros, ArraySize) {
 #define TEST_TOKEN abc
 
 TEST_CASE(Macros, Stringify) {
-  IGNORE_RESULT();
-
   static_assert(AXIO_STRINGIFY(abc)[0] == 'a', "Should stringify tokens");
   static_assert(AXIO_STRINGIFY(abc)[1] == 'b', "Should stringify tokens");
   static_assert(AXIO_STRINGIFY(abc)[2] == 'c', "Should stringify tokens");
@@ -68,8 +64,6 @@ TEST_CASE(Macros, Stringify) {
 #define AXIO_TEST_NUM 7
 
 TEST_CASE(Macros, Concat) {
-  IGNORE_RESULT();
-
   struct FooBar {};
   static_assert(std::is_same_v<AXIO_CONCAT(Foo, Bar), FooBar>,
                 "AXIO_CONCAT should concatenate tokens into a type");
@@ -88,8 +82,6 @@ TEST_CASE(Macros, Concat) {
 }
 
 TEST_CASE(Macros, Bit) {
-  IGNORE_RESULT();
-
   static_assert(AXIO_BIT(0) == 1ULL, "Bit 0 should be 1");
   static_assert(AXIO_BIT(1) == 2ULL, "Bit 1 should be 2");
   static_assert(AXIO_BIT(3) == 8ULL, "Bit 3 should be 8");
@@ -103,8 +95,6 @@ TEST_CASE(Macros, Bit) {
 }
 
 TEST_CASE(Macros, MinMax) {
-  IGNORE_RESULT();
-
   static_assert(AXIO_MIN(1, 2) == 1, "");
   static_assert(AXIO_MAX(1, 2) == 2, "");
 }

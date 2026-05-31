@@ -4,12 +4,10 @@
 
 #if defined(AXIO_OS_WINDOWS)
 TEST_CASE(OS, IsWindows) {
-  IGNORE_RESULT();
   CHECK_EQ(AXIO_OS_WINDOWS, 1);
 }
 
 TEST_CASE(OS, IsNotPosix) {
-  IGNORE_RESULT();
 #if defined(AXIO_OS_POSIX)
   static_assert(false, "Windows should not define AXIO_OS_POSIX");
 #endif

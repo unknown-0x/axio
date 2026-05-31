@@ -4,8 +4,6 @@
 #include <type_traits>
 
 TEST_CASE(Base, Types) {
-  IGNORE_RESULT();
-
   static_assert(std::is_same_v<axio::Byte, std::uint8_t>,
                 "Byte should be uint8_t");
 
