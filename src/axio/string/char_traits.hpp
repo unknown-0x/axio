@@ -1,4 +1,0 @@
-#ifndef AXIO_STRING_CHAR_TRAITS_HPP_
-#define AXIO_STRING_CHAR_TRAITS_HPP_
-
-#endif
