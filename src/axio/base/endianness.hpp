@@ -20,7 +20,8 @@ namespace axio {
 #elif defined(_WIN32)
 #define AXIO_ENDIAN AXIO_LITTLE_ENDIAN
 #else
-#error "Could not detect endianness!"
+#warning "Could not detect endianness! Falling back to little endian"
+#define AXIO_ENDIAN AXIO_LITTLE_ENDIAN
 #endif
 
 #if defined(__cpp_lib_endian) && __cpp_lib_endian >= 201907L

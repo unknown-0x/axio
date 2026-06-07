@@ -5,6 +5,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 
 #include "detail/allocator_holder.hpp"
 #include "detail/iterator_traits.hpp"
@@ -314,15 +315,16 @@ class Vector : private detail::AllocatorHolder<A> {
 
   Reference At(SizeType pos) {
     if (AXIO_LIKELY(pos >= Size())) {
-      throw std::out_of_range("Vector::At(SizeType) - index out of range");
+      throw std::out_of_range("Vector::At(SizeType): index " +
+                              std::to_string(pos) + " out of range");
     }
     return begin_[pos];
   }
 
   ConstReference At(SizeType pos) const {
     if (AXIO_LIKELY(pos >= Size())) {
-      throw std::out_of_range(
-          "Vector::At(SizeType) const - index out of range");
+      throw std::out_of_range("Vector::At(SizeType) const: index " +
+                              std::to_string(pos) + " out of range");
     }
     return begin_[pos];
   }

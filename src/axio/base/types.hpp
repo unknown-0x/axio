@@ -5,7 +5,7 @@
 #include <cstdint>
 
 namespace axio {
-using Byte = std::uint8_t;
+using Byte = std::byte;
 
 using Int8 = std::int8_t;
 using Int16 = std::int16_t;

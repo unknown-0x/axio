@@ -49,11 +49,13 @@ class SmallFunction<R(Args...), STORAGE_SIZE, STORAGE_ALIGN> {
   template <typename F>
   struct LocalModel {
     static R Invoke(const SmallFunction* self, Args&&... args) {
-      if constexpr (IsMemberFunctionPointer<F>::value) {
-        return std::invoke(*self->template GetStack<F>(),
-                           axio::Forward<Args>(args)...);
+      if constexpr (IsMemberFunctionPointer_V<F>) {
+        return std::invoke(
+            *const_cast<SmallFunction*>(self)->template GetStack<F>(),
+            axio::Forward<Args>(args)...);
       } else {
-        return (*self->template GetStack<F>())(axio::Forward<Args>(args)...);
+        return (*const_cast<SmallFunction*>(self)->template GetStack<F>())(
+            axio::Forward<Args>(args)...);
       }
     }
 
@@ -92,11 +94,13 @@ class SmallFunction<R(Args...), STORAGE_SIZE, STORAGE_ALIGN> {
   template <typename F>
   struct HeapModel {
     static R Invoke(const SmallFunction* self, Args&&... args) {
-      if constexpr (IsMemberFunctionPointer<F>::value) {
-        return std::invoke((*static_cast<const F*>(self->storage_.heap)),
-                           axio::Forward<Args>(args)...);
+      if constexpr (IsMemberFunctionPointer_V<F>) {
+        return std::invoke(
+            *static_cast<F*>(const_cast<SmallFunction*>(self)->storage_.heap),
+            axio::Forward<Args>(args)...);
       } else {
-        return (*static_cast<const F*>(self->storage_.heap))(
+        return (
+            *static_cast<F*>(const_cast<SmallFunction*>(self)->storage_.heap))(
             axio::Forward<Args>(args)...);
       }
     }

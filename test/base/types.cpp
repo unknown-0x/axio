@@ -4,7 +4,7 @@
 #include <type_traits>
 
 TEST_CASE(Base, Types) {
-  static_assert(std::is_same_v<axio::Byte, std::uint8_t>,
+  static_assert(std::is_same_v<axio::Byte, std::byte>,
                 "Byte should be uint8_t");
 
   static_assert(std::is_same_v<axio::Int8, std::int8_t>,
