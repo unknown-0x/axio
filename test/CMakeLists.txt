@@ -28,6 +28,7 @@ axio_test(
     container/vector.cpp
     container/array.cpp
     container/tuple.cpp
+    container/span.cpp
 )
 
 axio_test(
