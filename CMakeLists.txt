@@ -39,14 +39,3 @@ if(AXIO_BUILD_TESTING)
     FetchContent_MakeAvailable(simpletest)
     add_subdirectory(test)
 endif()
-
-if(AXIO_BUILD_BENCHMARK)
-    set(SIMPLEBENCH_BUILD_BENCHMARK OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(
-        simplebench
-        GIT_REPOSITORY https://github.com/unknown-0x/simple-bench.git
-        GIT_TAG        main
-    )
-    FetchContent_MakeAvailable(simplebench)
-    add_subdirectory(benchmark)
-endif()
