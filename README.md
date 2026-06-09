@@ -26,24 +26,24 @@
 
 ```c++
 #include <axio/string/string.hpp>
-#include <iostream>
+#include <axio/utility/print.hpp>
 
 int main() {
   axio::String msg = "Hello world!";
 
   if (msg.StartsWith("Hello")) {
-    std::cout << msg.CStr() << std::endl;
+    axio::Print(msg, ' ', 42);
   }
 }
 
 // Output:
-// Hello world!
+// Hello world! 42
 ```
 
 ```c++
 #include <axio/container/tuple.hpp>
 #include <axio/string/string_utils.hpp>
-#include <iostream>
+#include <axio/utility/print.hpp>
 
 struct Player {
   std::string name;
@@ -61,17 +61,16 @@ int main() {
   auto join_res = axio::StringJoin(tuple, " - ");
 
   // Output: (string, 42, {Alice, 100pts}) 42
-  std::cout << concat_res.CStr() << std::endl;
-
+  axio::PrintLn(concat_res);
   // Output: string - 42 - {Alice, 100pts}
-  std::cout << join_res.CStr() << std::endl;
+  axio::PrintLn(join_res);
 }
 ```
 
 ```c++
 #include <axio/container/vector.hpp>
 #include <axio/string/string_utils.hpp>
-#include <iostream>
+#include <axio/utility/print.hpp>
 
 int main() {
   auto v = axio::Split("aa,bb,  cc , dd,ee  ,ff,gg", ',') | axio::Drop(2) |
@@ -80,16 +79,16 @@ int main() {
   auto s = axio::StringJoin(v, "-");
 
   // Output: cc-dd-ee
-  std::cout << s.CStr() << std::endl;
+  axio::Print(s);
 }
 ```
 
 ```c++
+#include <array>
 #include <axio/base/type_traits.hpp>
 #include <axio/container/tuple.hpp>
-#include <iostream>
+#include <axio/utility/print.hpp>
 #include <vector>
-#include <array>
 
 static_assert(axio::IsSpecializationOf_V<std::vector<int>, std::vector>, "");
 
@@ -105,9 +104,9 @@ template <typename C, typename V>
 void TryPushBack(C& container, V&& value) {
   if constexpr (axio::IsDetected_V<HasPushBack, C>) {
     container.push_back(axio::Forward<V>(value));
-    std::cout << "Ok.\n";
+    axio::PrintLn("Ok.");
   } else {
-    std::cout << "No push_back available!\n";
+    axio::PrintLn("No push_back available!");
   }
 }
 
@@ -122,13 +121,13 @@ int main() {
 
 ```c++
 #include <axio/utility/defer.hpp>
-#include <iostream>
+#include <axio/utility/print.hpp>
 #include <string_view>
 
 void ProcessFile(std::string_view path) {
-  AXIO_DEFER([&] { std::cout << "Closing file: " << path << std::endl; });
+  AXIO_DEFER([&] { axio::PrintLn("Closing file: ", path); });
 
-  std::cout << "Opening file: " << path << std::endl;
+  axio::PrintLn("Opening file: ", path);
 
   const char* data = path.data();
   if (data) {
@@ -148,7 +147,7 @@ int main() {
 
 ```c++
 #include <axio/functional/small_function.hpp>
-#include <iostream>
+#include <axio/utility/print.hpp>
 #include <string_view>
 
 int Add(int x, int y) {
@@ -180,21 +179,20 @@ int main() {
   };
   axio::SmallFunction<int(int)> f3 = LargeFunctor(3);  // heap
   axio::SmallFunction<int(int), sizeof(LargeFunctor), alignof(LargeFunctor)>
-      f4 = LargeFunctor{1};            // stack
-      
-  std::cout << f1(1, 2) << std::endl;  // 3
-  std::cout << f2(1, 2) << std::endl;  // 6
-  std::cout << f3(1) << std::endl;     // 31
-  std::cout << f4(1) << std::endl;     // 11
+      f4 = LargeFunctor{1};  // stack
+
+  axio::PrintLn(f1(1, 2));  // 3
+  axio::PrintLn(f2(1, 2));  // 6
+  axio::PrintLn(f3(1));     // 31
+  axio::PrintLn(f4(1));     // 11
   return 0;
 }
 ```
 
 ```c++
 #include <axio/string/string.hpp>
+#include <axio/utility/print.hpp>
 #include <axio/utility/result.hpp>
-
-#include <iostream>
 
 axio::Result<int, axio::String> Divide(int a, int b) {
   if (b == 0) {
@@ -207,23 +205,22 @@ void TryDivide(int a, int b) {
   auto result = Divide(a, b);
 
   if (result) {
-    std::cout << a << '/' << b << '=' << *result << '\n';
+    axio::PrintLn(a, '/', b, '=', *result);
   } else {
-    std::cout << "Error: " << result.GetError().CStr() << '\n';
+    axio::PrintLn("Error: ", result.GetError());
   }
 }
 
 int main() {
-  TryDivide(10, 2); // 10/2=5
-  TryDivide(10, 0); // Error: Division by zero
+  TryDivide(10, 2);  // 10/2=5
+  TryDivide(10, 0);  // Error: Division by zero
   return 0;
 }
 ```
 
 ```c++
+#include <axio/utility/print.hpp>
 #include <axio/utility/result.hpp>
-
-#include <iostream>
 #include <string>
 
 using Result = axio::Result<int, std::string>;
@@ -251,9 +248,9 @@ void TryParse(const std::string& s) {
       Parse(s).Then(Reciprocal).Then(AddFive).Map([](int x) { return x * 2; });
 
   if (result) {
-    std::cout << *result << '\n';
+    axio::PrintLn(*result);
   } else {
-    std::cout << result.GetError() << '\n';
+    axio::PrintLn(result.GetError());
   }
 }
 
@@ -263,7 +260,6 @@ int main() {
   TryParse("");    // Empty string
   return 0;
 }
-
 ```
 ---
 
