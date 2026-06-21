@@ -6,6 +6,7 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
+#include <string>
 
 #include "detail/allocator_holder.hpp"
 #include "detail/iterator_traits.hpp"
@@ -20,6 +21,12 @@
 #include "../string/axio_repr.hpp"
 
 namespace axio {
+/**
+ * @brief A dynamically-sized, contiguous, growable array, analogous to
+ *        std::vector.
+ * @tparam T Element type.
+ * @tparam A Allocator type.
+ */
 template <typename T, typename A = axio::Allocator<T>>
 class Vector : private detail::AllocatorHolder<A> {
   using AllocatorHolder = detail::AllocatorHolder<A>;
@@ -46,16 +53,20 @@ class Vector : private detail::AllocatorHolder<A> {
   using ReverseIterator = std::reverse_iterator<Iterator>;
   using ConstReverseIterator = std::reverse_iterator<ConstIterator>;
 
+  /** Capacity multiplier applied on growth reallocation. */
   static constexpr SizeType kGrowthFactor = SizeType(2);
 
+  /** Constructs an empty Vector with a default-constructed allocator. */
   Vector() noexcept(noexcept(AllocatorType())) : Vector(AllocatorType()) {}
 
+  /** Constructs an empty Vector using the given allocator. */
   explicit Vector(const AllocatorType& allocator)
       : AllocatorHolder(allocator),
         begin_(nullptr),
         end_(nullptr),
         storage_end_(nullptr) {}
 
+  /** Constructs a Vector with count default-constructed elements. */
   explicit Vector(SizeType count,
                   const AllocatorType& allocator = AllocatorType())
       : AllocatorHolder(allocator) {
@@ -63,6 +74,7 @@ class Vector : private detail::AllocatorHolder<A> {
     FillElements(alloc, begin_, end_);
   }
 
+  /** Constructs a Vector with count copies of value. */
   Vector(SizeType count,
          ConstReference value,
          const AllocatorType& allocator = AllocatorType())
@@ -71,6 +83,7 @@ class Vector : private detail::AllocatorHolder<A> {
     FillElements(alloc, begin_, end_, value);
   }
 
+  /** Constructs a Vector from an input-iterator range (single-pass). */
   template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
   Vector(InputIt first,
          InputIt last,
@@ -85,6 +98,7 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Constructs a Vector from a forward-iterator range (multi-pass). */
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   Vector(ForwardIt first,
          ForwardIt last,
@@ -95,6 +109,7 @@ class Vector : private detail::AllocatorHolder<A> {
     CopyElements(alloc, begin_, first, last);
   }
 
+  /** Constructs a Vector from an initializer list. */
   Vector(std::initializer_list<ValueType> values,
          const AllocatorType& allocator = AllocatorType())
       : AllocatorHolder(allocator) {
@@ -102,14 +117,17 @@ class Vector : private detail::AllocatorHolder<A> {
     CopyElements(alloc, begin_, values.begin(), values.end());
   }
 
+  /** Copy-constructs, reusing other's allocator. */
   Vector(const Vector& other) : Vector(other, other.GetAlloc()) {}
 
+  /** Copy-constructs using the given allocator. */
   Vector(const Vector& other, const AllocatorType& allocator)
       : AllocatorHolder(allocator) {
     auto& alloc = Initialize(other.Size());
     CopyElements(alloc, begin_, other.begin_, other.end_);
   }
 
+  /** Move-constructs, taking ownership of other's storage. */
   Vector(Vector&& other) noexcept
       : AllocatorHolder(Move(other.GetAlloc())),
         begin_(other.begin_),
@@ -120,6 +138,8 @@ class Vector : private detail::AllocatorHolder<A> {
     other.storage_end_ = nullptr;
   }
 
+  /** Move-constructs using the given allocator. Steals other's storage
+   *  when allocators compare equal, otherwise moves elements one by one. */
   Vector(Vector&& other, const AllocatorType& allocator)
       : AllocatorHolder(allocator) {
     if (!other.begin_) {
@@ -144,6 +164,7 @@ class Vector : private detail::AllocatorHolder<A> {
 
   ~Vector() { Release(this->GetAlloc()); }
 
+  /** Copy-assigns the contents of other into this Vector. */
   Vector& operator=(const Vector& other) {
     if (AXIO_LIKELY(this != &other)) {
       if constexpr (AllocatorTraits::propagate_on_container_copy_assignment::
@@ -163,6 +184,7 @@ class Vector : private detail::AllocatorHolder<A> {
     return *this;
   }
 
+  /** Move-assigns the contents of other into this Vector. */
   Vector& operator=(Vector&& other) noexcept(
       AllocatorTraits::propagate_on_container_move_assignment::value ||
       AllocatorTraits::is_always_equal::value) {
@@ -190,11 +212,13 @@ class Vector : private detail::AllocatorHolder<A> {
     return *this;
   }
 
+  /** Replaces the contents with an initializer list. */
   Vector& operator=(std::initializer_list<ValueType> values) {
     Assign(values.begin(), values.end());
     return *this;
   }
 
+  /** Replaces the contents with elements from an input-iterator range. */
   template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
   void Assign(InputIt first, InputIt last) {
     auto beg = begin_;
@@ -214,6 +238,7 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Replaces the contents with elements from a forward-iterator range. */
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   void Assign(ForwardIt first, ForwardIt last) {
     const auto count = static_cast<SizeType>(std::distance(first, last));
@@ -239,6 +264,7 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Replaces the contents with count copies of value. */
   void Assign(SizeType count, ConstReference value) {
     const auto size = Size();
     if (AXIO_LIKELY(count > size)) {
@@ -263,10 +289,13 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Replaces the contents with an initializer list. */
   void Assign(std::initializer_list<ValueType> values) {
     Assign(values.begin(), values.end());
   }
 
+  /** Destroys all elements, leaving the Vector empty without changing
+   *  capacity. */
   void Clear() {
     if (end_ > begin_) {
       DestroyElements(this->GetAlloc(), begin_, end_);
@@ -274,45 +303,58 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Resizes to new_size, default-constructing any new elements. */
   void Resize(SizeType new_size) { ResizeImpl(new_size); }
 
+  /** Resizes to new_size, copy-constructing any new elements from value. */
   void Resize(SizeType new_size, ConstReference value) {
     ResizeImpl(new_size, value);
   }
 
+  /** Ensures capacity is at least new_capacity, reallocating if needed. */
   void Reserve(SizeType new_capacity) {
     if (Capacity() < new_capacity) {
       Reallocate(new_capacity);
     }
   }
 
+  /** Reduces capacity to fit the current size. */
   void Shrink() {
     if (storage_end_ > end_) {
       Reallocate(static_cast<SizeType>(end_ - begin_));
     }
   }
 
+  /** Returns a copy of the allocator. */
   AllocatorType GetAllocator() const { return this->GetAlloc(); }
 
+  /** Returns true if the Vector has no elements. */
   Bool IsEmpty() const noexcept { return begin_ == end_; }
 
+  /** Returns the number of elements. */
   SizeType Size() const noexcept {
     return static_cast<SizeType>(end_ - begin_);
   }
 
+  /** Returns the number of elements the current storage can hold. */
   SizeType Capacity() const noexcept {
     return static_cast<SizeType>(storage_end_ - begin_);
   }
 
+  /** Returns a pointer to the underlying element storage. */
   Pointer Data() noexcept { return begin_; }
+  /** Returns a const pointer to the underlying element storage. */
   ConstPointer Data() const noexcept { return begin_; }
 
+  /** Returns the maximum number of elements the Vector could hold. */
   SizeType MaxSize() const noexcept {
     static constexpr auto kMaxSz =
         std::numeric_limits<SizeType>::max() / sizeof(ValueType);
     return std::min(kMaxSz, AllocatorTraits::max_size(this->GetAlloc()));
   }
 
+  /** Returns a reference to the element at pos, throwing
+   *  std::out_of_range if pos is out of bounds. */
   Reference At(SizeType pos) {
     if (AXIO_LIKELY(pos >= Size())) {
       throw std::out_of_range("Vector::At(SizeType): index " +
@@ -321,6 +363,7 @@ class Vector : private detail::AllocatorHolder<A> {
     return begin_[pos];
   }
 
+  /** Const overload of At(). */
   ConstReference At(SizeType pos) const {
     if (AXIO_LIKELY(pos >= Size())) {
       throw std::out_of_range("Vector::At(SizeType) const: index " +
@@ -329,31 +372,37 @@ class Vector : private detail::AllocatorHolder<A> {
     return begin_[pos];
   }
 
+  /** Returns a reference to the element at pos. Asserts pos is in range. */
   Reference operator[](SizeType pos) {
     AXIO_ASSERT(pos < Size());
     return *(begin_ + pos);
   }
 
+  /** Const overload of operator[](). */
   ConstReference operator[](SizeType pos) const {
     AXIO_ASSERT(pos < Size());
     return *(begin_ + pos);
   }
 
+  /** Returns a reference to the first element. Asserts non-empty. */
   Reference Front() {
     AXIO_ASSERT(!IsEmpty());
     return *begin_;
   }
 
+  /** Const overload of Front(). */
   ConstReference Front() const {
     AXIO_ASSERT(!IsEmpty());
     return *begin_;
   }
 
+  /** Returns a reference to the last element. Asserts non-empty. */
   Reference Back() {
     AXIO_ASSERT(!IsEmpty());
     return *(end_ - 1);
   }
 
+  /** Const overload of Back(). */
   ConstReference Back() const {
     AXIO_ASSERT(!IsEmpty());
     return *(end_ - 1);
@@ -385,6 +434,8 @@ class Vector : private detail::AllocatorHolder<A> {
     return ConstReverseIterator(begin_);
   }
 
+  /** Constructs a new element in-place at the end, growing storage if
+   *  needed. Returns a reference to the new element. */
   template <typename... ArgTypes>
   Reference Push(ArgTypes&&... args) {
     if (end_ == storage_end_) {
@@ -405,6 +456,7 @@ class Vector : private detail::AllocatorHolder<A> {
     return *(end_++);
   }
 
+  /** Appends elements from an input-iterator range to the end. */
   template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
   void Append(InputIt first, InputIt last) {
     while (first != last) {
@@ -413,6 +465,7 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Appends elements from a forward-iterator range to the end. */
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   void Append(ForwardIt first, ForwardIt last) {
     const auto count = static_cast<SizeType>(std::distance(first, last));
@@ -432,10 +485,12 @@ class Vector : private detail::AllocatorHolder<A> {
     end_ += count;
   }
 
+  /** Appends elements from an initializer list to the end. */
   void Append(std::initializer_list<ValueType> values) {
     Append(values.begin(), values.end());
   }
 
+  /** Appends count copies of value to the end. */
   void Append(SizeType count, ConstReference value) {
     if (end_ + count > storage_end_) {
       auto& allocator = this->GetAlloc();
@@ -454,6 +509,8 @@ class Vector : private detail::AllocatorHolder<A> {
     end_ += count;
   }
 
+  /** Removes the element at pos, shifting subsequent elements left.
+   *  Returns an iterator to the element following the removed one. */
   Iterator Remove(ConstIterator pos) {
     AXIO_ASSERT(pos >= begin_ && pos < end_);
     Iterator pos_it = begin_ + (pos - begin_);
@@ -462,6 +519,8 @@ class Vector : private detail::AllocatorHolder<A> {
     return pos_it;
   }
 
+  /** Removes the elements in [first, last), shifting subsequent elements
+   *  left. Returns an iterator to the element following the removed range. */
   Iterator Remove(ConstIterator first, ConstIterator last) {
     AXIO_ASSERT(first >= begin_ && first <= last && last <= end_);
     const SizeType count = static_cast<SizeType>(last - first);
@@ -473,11 +532,14 @@ class Vector : private detail::AllocatorHolder<A> {
     return begin_ + (first - begin_);
   }
 
+  /** Removes the last element. Asserts the Vector is non-empty. */
   void Pop() {
     AXIO_ASSERT(end_ != begin_);
     AllocatorTraits::destroy(this->GetAlloc(), --end_);
   }
 
+  /** Constructs a new element in-place before pos, growing storage if
+   *  needed. Returns an iterator to the inserted element. */
   template <typename... ArgTypes>
   Iterator Emplace(ConstIterator pos, ArgTypes&&... args) {
     AXIO_ASSERT(pos >= begin_ && pos <= end_);
@@ -513,6 +575,8 @@ class Vector : private detail::AllocatorHolder<A> {
     return pos_it;
   }
 
+  /** Inserts count copies of value before pos. Returns an iterator to the
+   *  first inserted element. */
   Iterator Insert(ConstIterator pos, SizeType count, ConstReference value) {
     AXIO_ASSERT(pos >= begin_ && pos <= end_);
     if (count == 0) {
@@ -558,10 +622,12 @@ class Vector : private detail::AllocatorHolder<A> {
     return pos_it;
   }
 
+  /** Inserts elements of an initializer list before pos. */
   Iterator Insert(ConstIterator pos, std::initializer_list<ValueType> values) {
     return Insert(pos, values.begin(), values.end());
   }
 
+  /** Inserts elements from an input-iterator range before pos. */
   template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
   Iterator Insert(ConstIterator pos, InputIt first, InputIt last) {
     auto idx = static_cast<SizeType>(pos - begin_);
@@ -573,8 +639,10 @@ class Vector : private detail::AllocatorHolder<A> {
     return begin_ + temp_idx;
   }
 
-  // Note: This function does not support self-insertion. Passing iterators from
-  // the same vector instance results in undefined behavior.
+  /** Inserts elements from a forward-iterator range before pos.
+   *  @note: This function does not support self-insertion. Passing
+   *  iterators from the same vector instance results in undefined
+   *  behavior. */
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   Iterator Insert(ConstIterator pos, ForwardIt first, ForwardIt last) {
     AXIO_ASSERT(pos >= begin_ && pos <= end_);
@@ -617,6 +685,8 @@ class Vector : private detail::AllocatorHolder<A> {
   }
 
  private:
+  /** Trait: true when copying/moving InputIt -> DstPointer can be done via
+   *  memcpy (trivially copyable, matching value types, contiguous source). */
   template <typename DstPointer, typename InputIt>
   struct ShouldUseMemcpy {
     using ValueType =
@@ -629,6 +699,8 @@ class Vector : private detail::AllocatorHolder<A> {
                                                 IsPointer<InputIt>>;
   };
 
+  /** Computes the new capacity needed to add add_size elements, applying
+   *  the growth factor and clamping to MaxSize(). */
   SizeType ComputeCapacity(SizeType old_capacity, SizeType add_size) {
     if (old_capacity == 0) {
       return AXIO_MAX(add_size, SizeType(8));
@@ -645,6 +717,7 @@ class Vector : private detail::AllocatorHolder<A> {
     return AXIO_MAX(grown, required);
   }
 
+  /** Destroys all elements and deallocates storage, if any. */
   void Release(AllocatorType& allocator) {
     if (!begin_) {
       return;
@@ -656,12 +729,14 @@ class Vector : private detail::AllocatorHolder<A> {
                                 static_cast<SizeType>(storage_end_ - begin_));
   }
 
+  /** Sets begin_/end_/storage_end_ from a freshly allocated buffer. */
   void SetStorage(Pointer new_begin, SizeType new_size, SizeType new_capacity) {
     begin_ = new_begin;
     end_ = begin_ + new_size;
     storage_end_ = begin_ + new_capacity;
   }
 
+  /** Reallocates storage to the given capacity, moving existing elements. */
   void Reallocate(SizeType capacity) {
     auto& allocator = this->GetAlloc();
     auto new_begin = AllocatorTraits::allocate(allocator, capacity);
@@ -671,12 +746,15 @@ class Vector : private detail::AllocatorHolder<A> {
     SetStorage(new_begin, size, capacity);
   }
 
+  /** Allocates storage for count elements and sets size == capacity == count.
+   */
   AllocatorType& Initialize(SizeType count) {
     auto& allocator = this->GetAlloc();
     SetStorage(AllocatorTraits::allocate(allocator, count), count, count);
     return allocator;
   }
 
+  /** Shared implementation for both Resize() overloads. */
   template <typename... ArgTypes>
   void ResizeImpl(SizeType new_size, ArgTypes&&... args) {
     const auto current_size = Size();
@@ -698,6 +776,8 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Destroys elements in [first, last); no-op for trivially-destructible
+   *  types. */
   static void DestroyElements(AllocatorType& allocator,
                               Pointer first,
                               Pointer last) {
@@ -708,6 +788,8 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Copy-constructs elements at dst from [first, last), using memcpy
+   *  when possible. Cleans up on exception. */
   template <typename InputIt>
   static void CopyElements(AllocatorType& allocator,
                            Pointer dst,
@@ -734,6 +816,8 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Copy-assigns elements in [first, last) from source, using memcpy
+   *  when possible. Optionally returns the advanced source iterator. */
   template <Bool RETURN_INPUT_IT, typename InputIt>
   static Conditional_T<RETURN_INPUT_IT, InputIt, void>
   CopyAssignElements(Pointer first, Pointer last, InputIt source) {
@@ -754,6 +838,8 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Move-constructs elements at dst from [first, last), using memcpy
+   *  when possible. Cleans up on exception. */
   template <typename InputIt>
   static void MoveElements(AllocatorType& allocator,
                            Pointer dst,
@@ -781,6 +867,8 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Move-assigns elements at dst from [first, last), using memcpy when
+   *  possible. Does not handle overlapping forward ranges. */
   template <typename InputIt>
   static void MoveAssignElements(Pointer dst, InputIt first, InputIt last) {
     using UseMemcpy = ShouldUseMemcpy<Pointer, InputIt>;
@@ -796,6 +884,8 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Move-assigns elements from [first, last) ending at dst, iterating
+   *  backward; safe for overlapping ranges where dst > first. */
   template <typename InputIt>
   static void MoveAssignBackward(Pointer dst, InputIt first, InputIt last) {
     using UseMemcpy = ShouldUseMemcpy<Pointer, InputIt>;
@@ -811,6 +901,8 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Default-constructs elements in [first, last); zero-fills for scalar
+   *  types. Cleans up on exception. */
   static void FillElements(AllocatorType& allocator,
                            Pointer first,
                            Pointer last) {
@@ -834,6 +926,8 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Constructs elements in [first, last) as copies of value; uses
+   *  memset where applicable for scalar types. Cleans up on exception. */
   static void FillElements(AllocatorType& allocator,
                            Pointer first,
                            Pointer last,
@@ -866,6 +960,8 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
+  /** Assigns value to existing elements in [first, last); uses memset
+   *  where applicable for scalar types. */
   static void FillAssignElements(Pointer first,
                                  Pointer last,
                                  ConstReference value) {
@@ -889,38 +985,45 @@ class Vector : private detail::AllocatorHolder<A> {
   Pointer storage_end_;
 };
 
+/** Returns true if lhs and rhs have equal size and elements. */
 template <typename T, typename A>
 Bool operator==(const Vector<T, A>& lhs, const Vector<T, A>& rhs) {
   return lhs.Size() == rhs.Size() &&
          std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
+/** Returns true if lhs and rhs differ in size or elements. */
 template <typename T, typename A>
 Bool operator!=(const Vector<T, A>& lhs, const Vector<T, A>& rhs) {
   return !(lhs == rhs);
 }
 
+/** Lexicographically compares lhs and rhs. */
 template <typename T, typename A>
 Bool operator<(const Vector<T, A>& lhs, const Vector<T, A>& rhs) {
   return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
                                       rhs.end());
 }
 
+/** Lexicographically compares lhs and rhs. */
 template <typename T, typename A>
 Bool operator<=(const Vector<T, A>& lhs, const Vector<T, A>& rhs) {
   return !(rhs < lhs);
 }
 
+/** Lexicographically compares lhs and rhs. */
 template <typename T, typename A>
 Bool operator>(const Vector<T, A>& lhs, const Vector<T, A>& rhs) {
   return rhs < lhs;
 }
 
+/** Lexicographically compares lhs and rhs. */
 template <typename T, typename A>
 Bool operator>=(const Vector<T, A>& lhs, const Vector<T, A>& rhs) {
   return !(lhs < rhs);
 }
 
+/** Appends the textual representation of vector, e.g. "[1, 2, 3]". */
 template <typename Output, typename T, typename A>
 void AxioRepr(Output& output, const Vector<T, A>& vector) {
   using SizeType = typename Vector<T, A>::SizeType;
