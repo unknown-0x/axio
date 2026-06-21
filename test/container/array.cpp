@@ -180,3 +180,11 @@ TEST_CASE(ZeroLengthArray, Comparison) {
   CHECK_TRUE(a <= b);
   CHECK_TRUE(a >= b);
 }
+
+TEST_CASE(Array_StructuredBinding, Basic) {
+  Array<int, 3> points{1, 2, 3};
+  auto [x, y, z] = points;
+  CHECK_EQ(x, 1);
+  CHECK_EQ(y, 2);
+  CHECK_EQ(z, 3);
+}
