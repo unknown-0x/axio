@@ -131,11 +131,11 @@ class BasicString : private detail::AllocatorHolder<A> {
     TraitsType::copy(InitWithSize(n), s, n);
   }
 
-  /** 
+  /**
    * @brief Constructs by copying `count` characters from `s`.
    * @param s         Source buffer (need not be null-terminated).
    * @param count     Number of characters to copy.
-   * @param allocator Allocator to use. 
+   * @param allocator Allocator to use.
    */
   BasicString(ConstPointer s,
               SizeType count,
@@ -152,10 +152,10 @@ class BasicString : private detail::AllocatorHolder<A> {
     TraitsType::assign(InitWithSize(count), count, c);
   }
 
-  /** 
+  /**
    * @brief Constructs from a single-pass [first, last) input iterator range.
    * @note Falls back to repeated Push() since the distance is unknown ahead
-   *       of time. 
+   *       of time.
    */
   template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
   BasicString(InputIt first,
@@ -168,7 +168,7 @@ class BasicString : private detail::AllocatorHolder<A> {
     }
   }
 
-  /** 
+  /**
    * @brief Constructs from a [first, last) forward iterator range.
    * @note The range length is computed up front via `std::distance` so the
    *       backing storage is allocated exactly once.
@@ -182,9 +182,9 @@ class BasicString : private detail::AllocatorHolder<A> {
     Copy(InitWithSize(n), first, n);
   }
 
-  /** 
+  /**
    * @brief Constructs from any string_view-convertible type (e.g.
-   *        `std::string`, `std::string_view`). 
+   *        `std::string`, `std::string_view`).
    */
   template <typename StringViewLike,
             EnableIfIsStringViewLike<StringViewLike, int> = 0>
@@ -196,11 +196,11 @@ class BasicString : private detail::AllocatorHolder<A> {
     TraitsType::copy(InitWithSize(n), view.data(), n);
   }
 
-  /** 
+  /**
    * @brief Constructs from a substring `[pos, pos + count)` of a
    *        string_view-convertible type.
    * @param count Number of characters; clamped to the available length, or
-   *              `kNpos` to mean "to the end". 
+   *              `kNpos` to mean "to the end".
    */
   template <typename StringViewLike,
             EnableIfIsStringViewLike<StringViewLike, int> = 0>
@@ -230,7 +230,7 @@ class BasicString : private detail::AllocatorHolder<A> {
     TraitsType::copy(InitWithSize(n), other.Data(), n);
   }
 
-  /** 
+  /**
    * @brief Move constructor. Steals `other`'s storage; `other` is left
    *        empty (in SSO mode).
    */
@@ -247,11 +247,11 @@ class BasicString : private detail::AllocatorHolder<A> {
     TraitsType::copy(InitWithSize(n), other.Data(), n);
   }
 
-  /** 
+  /**
    * @brief Move constructor using an explicitly supplied allocator.
    * @note If `allocator` compares equal to `other`'s allocator the storage
    *       is stolen; otherwise the characters are copied since heap memory
-   *       allocated by one allocator cannot be freed by another. 
+   *       allocated by one allocator cannot be freed by another.
    */
   BasicString(BasicString&& other, const AllocatorType& allocator)
       : AllocatorHolder(allocator) {
@@ -290,12 +290,12 @@ class BasicString : private detail::AllocatorHolder<A> {
     return StringViewType(Data(), Size());
   }
 
-  /** 
+  /**
    * @brief Copy assignment.
    * @note If the allocator must propagate on copy assignment and differs
    *       from `other`'s allocator, existing storage is released and the
    *       allocator is replaced before copying; otherwise the data is
-   *       assigned in place via Assign(). 
+   *       assigned in place via Assign().
    */
   BasicString& operator=(const BasicString& other) {
     if (this == &other) {
@@ -319,11 +319,11 @@ class BasicString : private detail::AllocatorHolder<A> {
     return *this;
   }
 
-  /** 
+  /**
    * @brief Move assignment.
    * @note Storage is stolen when the allocator propagates on move
    *       assignment, is always-equal, or already compares equal to
-   *       `other`'s allocator; otherwise the data is copied via Assign(). 
+   *       `other`'s allocator; otherwise the data is copied via Assign().
    */
   BasicString& operator=(BasicString&& other) noexcept(
       noexcept(AllocatorTraits::propagate_on_container_move_assignment::value ||
@@ -396,10 +396,10 @@ class BasicString : private detail::AllocatorHolder<A> {
     return operator=(Move(other));
   }
 
-  /** 
+  /**
    * @brief Replaces the contents with `n` copies of character `c`.
    * @note Reuses existing storage when `n` fits within the current
-   *       capacity; otherwise releases and reallocates. 
+   *       capacity; otherwise releases and reallocates.
    */
   BasicString& Assign(SizeType n, ValueType c) {
     if (n <= Capacity()) {
@@ -487,10 +487,10 @@ class BasicString : private detail::AllocatorHolder<A> {
     return *this;
   }
 
-  /** 
+  /**
    * @brief Replaces the contents with a forward iterator range.
    * @note Reallocates only if `[first, last)` does not fit in the current
-   *       capacity. 
+   *       capacity.
    */
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   BasicString& Assign(ForwardIt first, ForwardIt last) {
@@ -549,9 +549,9 @@ class BasicString : private detail::AllocatorHolder<A> {
     return std::min(kMaxSz, AllocatorTraits::max_size(this->GetAlloc())) - 1;
   }
 
-  /** 
+  /**
    * @brief Bounds-checked element access.
-   * @throws std::out_of_range if `pos >= Size()`. 
+   * @throws std::out_of_range if `pos >= Size()`.
    */
   Reference At(SizeType pos) {
     if (AXIO_LIKELY(pos >= Size())) {
@@ -560,9 +560,9 @@ class BasicString : private detail::AllocatorHolder<A> {
     return Data()[pos];
   }
 
-  /** 
+  /**
    * @brief Const overload of At().
-   * @throws std::out_of_range if `pos >= Size()`. 
+   * @throws std::out_of_range if `pos >= Size()`.
    */
   ConstReference At(SizeType pos) const {
     if (AXIO_LIKELY(pos >= Size())) {
@@ -637,7 +637,7 @@ class BasicString : private detail::AllocatorHolder<A> {
   /** @brief Removes all characters, keeping the allocated capacity. */
   void Clear() { IsSSO() ? SetModeAsSSO(0) : SetHeapSize(0); }
 
-  /** 
+  /**
    * @brief Resizes the string to `n` characters.
    *
    * If `n` is smaller than the current size, the string is truncated.
@@ -645,7 +645,7 @@ class BasicString : private detail::AllocatorHolder<A> {
    * needed.
    * @param n New size.
    * @param c Fill character for newly added positions. Defaults to the
-   *          null terminator value. 
+   *          null terminator value.
    */
   void Resize(SizeType n, ValueType c = kNullTerminator) {
     const auto old_size = Size();
@@ -700,7 +700,7 @@ class BasicString : private detail::AllocatorHolder<A> {
     Reallocate(size, size);
   }
 
-  /** 
+  /**
    * @brief Appends a single character, growing storage if necessary.
    * @return A reference to the newly appended character.
    */
@@ -720,13 +720,13 @@ class BasicString : private detail::AllocatorHolder<A> {
     return data[size - 1];
   }
 
-  /** 
+  /**
    * @brief Removes `count` characters starting at `index`.
    * @param index Starting position. Must be `<= Size()`.
    * @param count Number of characters to remove; `kNpos` (default) removes
    *              through the end of the string.
-   * @return `*this`. 
-  */
+   * @return `*this`.
+   */
   BasicString& Remove(SizeType index = 0, SizeType count = kNpos) {
     const auto size = Size();
     AXIO_ASSERT(index <= size);
@@ -750,9 +750,9 @@ class BasicString : private detail::AllocatorHolder<A> {
     return *this;
   }
 
-  /** 
+  /**
    * @brief Removes the single character at `pos`.
-   * @return Iterator to the position following the removed character. 
+   * @return Iterator to the position following the removed character.
    */
   Iterator Remove(ConstIterator pos) {
     auto b = begin();
@@ -762,9 +762,9 @@ class BasicString : private detail::AllocatorHolder<A> {
     return b + index;
   }
 
-  /** 
+  /**
    * @brief Removes the characters in `[first, last)`.
-   * @return Iterator to the position following the removed range. 
+   * @return Iterator to the position following the removed range.
    */
   Iterator Remove(ConstIterator first, ConstIterator last) {
     auto b = begin();
@@ -838,9 +838,9 @@ class BasicString : private detail::AllocatorHolder<A> {
     return Append(view.begin(), view.end());
   }
 
-  /** 
+  /**
    * @brief Appends a substring `[pos, pos + count)` of a string_view-
-   *        convertible type. 
+   *        convertible type.
    */
   template <typename StringViewLike,
             EnableIfIsStringViewLike<StringViewLike, int> = 0>
@@ -866,10 +866,10 @@ class BasicString : private detail::AllocatorHolder<A> {
     return *this;
   }
 
-  /** 
+  /**
    * @brief Appends a [first, last) forward iterator range.
    * @note Computes the range length up front and grows storage at most
-   *       once. 
+   *       once.
    */
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   BasicString& Append(ForwardIt first, ForwardIt last) {
@@ -963,9 +963,9 @@ class BasicString : private detail::AllocatorHolder<A> {
     return *this;
   }
 
-  /** 
+  /**
    * @brief Inserts a single character before `pos`.
-   * @return Iterator to the inserted character. 
+   * @return Iterator to the inserted character.
    */
   Iterator Insert(ConstIterator pos, ValueType value) {
     auto b = begin();
@@ -984,10 +984,10 @@ class BasicString : private detail::AllocatorHolder<A> {
     return dst;
   }
 
-  /** 
+  /**
    * @brief Inserts `count` copies of `value` before `pos`.
    * @return Iterator to the first inserted character (or `pos` if
-   *         `count == 0`). 
+   *         `count == 0`).
    */
   Iterator Insert(ConstIterator pos, SizeType count, ValueType value) {
     auto b = begin();
@@ -1009,19 +1009,19 @@ class BasicString : private detail::AllocatorHolder<A> {
     return dst;
   }
 
-  /** 
+  /**
    * @brief Inserts an initializer list of characters before `pos`.
-   * @return Iterator to the first inserted character. 
+   * @return Iterator to the first inserted character.
    */
   Iterator Insert(ConstIterator pos, std::initializer_list<ValueType> values) {
     return Insert(pos, values.begin(), values.end());
   }
 
-  /** 
+  /**
    * @brief Inserts a single-pass [first, last) range before `pos`.
    * @note Materializes the range into a temporary BasicString first since
    *       the insertion point may need to be shifted by an unknown amount.
-   * @return Iterator to the first inserted character. 
+   * @return Iterator to the first inserted character.
    */
   template <typename InputIt, EnableIfNotForwardIt<InputIt> = 0>
   Iterator Insert(ConstIterator pos, InputIt first, InputIt last) {
@@ -1030,9 +1030,9 @@ class BasicString : private detail::AllocatorHolder<A> {
     return Insert(begin() + index, temp.begin(), temp.end());
   }
 
-  /** 
+  /**
    * @brief Inserts a [first, last) forward iterator range before `pos`.
-   * @return Iterator to the first inserted character. 
+   * @return Iterator to the first inserted character.
    */
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   Iterator Insert(ConstIterator pos, ForwardIt first, ForwardIt last) {
@@ -1073,10 +1073,10 @@ class BasicString : private detail::AllocatorHolder<A> {
     return dst;
   }
 
-  /** 
+  /**
    * @brief Lexicographically compares against `s`.
    * @return `< 0`, `0`, or `> 0` as this string compares less than, equal
-   *         to, or greater than `s`. 
+   *         to, or greater than `s`.
    */
   int Compare(const BasicString& s) const {
     return Compare(s.Data(), s.Size());
@@ -1245,19 +1245,19 @@ class BasicString : private detail::AllocatorHolder<A> {
            TraitsType::compare(Data() + (size - n), view.data(), n) == 0;
   }
 
-  /** 
+  /**
    * @brief Finds the first occurrence of `str` at or after `pos`.
-   * @return Index of the match, or `kNpos` if not found. 
+   * @return Index of the match, or `kNpos` if not found.
    */
   SizeType Find(const BasicString& str, SizeType pos = 0) const noexcept {
     return Find(str.Data(), pos, str.Size());
   }
 
-  /** 
+  /**
    * @brief Finds the first occurrence of `count` characters from `s` at or
    *        after `pos`.
    * @return Index of the match, or `kNpos` if not found. Returns `pos` if
-   *         `count == 0`. 
+   *         `count == 0`.
    */
   SizeType Find(ConstPointer s, SizeType pos, SizeType count) const {
     const auto size = Size();
@@ -1305,9 +1305,9 @@ class BasicString : private detail::AllocatorHolder<A> {
     return Find(view.data(), pos, static_cast<SizeType>(view.size()));
   }
 
-  /** 
+  /**
    * @brief Finds the last occurrence of `str` at or before `pos`.
-   * @return Index of the match, or `kNpos` if not found. 
+   * @return Index of the match, or `kNpos` if not found.
    */
   SizeType RFind(const BasicString& str, SizeType pos = kNpos) const noexcept {
     return RFind(str.Data(), pos, str.Size());
@@ -1635,12 +1635,12 @@ class BasicString : private detail::AllocatorHolder<A> {
     return Replace(pos, count, values.begin(), values.end());
   }
 
-  /** 
+  /**
    * @brief Replaces `[pos, pos + count)` with `count2` copies of `value`.
    * @note Grows storage in one step (allocating a new buffer and splicing
    *       the unchanged prefix/suffix around the replacement) when the
    *       replacement does not fit in place; otherwise shifts the tail in
-   *       place. 
+   *       place.
    */
   BasicString& Replace(SizeType pos,
                        SizeType count,
@@ -1734,10 +1734,10 @@ class BasicString : private detail::AllocatorHolder<A> {
     return *this;
   }
 
-  /** 
+  /**
    * @brief Replaces `[pos, pos + count)` with a [first, last) forward
    *        iterator range.
-   * @note Mirrors the growth strategy of the count/value overload above. 
+   * @note Mirrors the growth strategy of the count/value overload above.
    */
   template <typename ForwardIt, EnableIfForwardIt<ForwardIt> = 0>
   BasicString& Replace(SizeType pos,
@@ -1946,10 +1946,10 @@ class BasicString : private detail::AllocatorHolder<A> {
   static_assert(sizeof(SSOStorage) == sizeof(HeapStorage),
                 "SSOStorage and HeapStorage must have the same size");
 
-  /** 
+  /**
    * @brief Tagged union holding either inline (SSO) or heap storage. The
    *        mode tag lives in the most/least significant byte of `heap.capacity`
-   *        (matching `sso`'s last byte), depending on endianness. 
+   *        (matching `sso`'s last byte), depending on endianness.
    * */
   union Storage {
     HeapStorage heap;
@@ -1962,16 +1962,16 @@ class BasicString : private detail::AllocatorHolder<A> {
   /** Bit set in the mode byte when storage is heap-allocated. */
   static constexpr unsigned char kHeapMask = 0x40;
 
-  /** 
+  /**
    * Byte offset of the mode/tag byte within `storage_`, chosen so it
-   * aliases the SSO buffer's last byte regardless of endianness. 
+   * aliases the SSO buffer's last byte regardless of endianness.
    */
   static constexpr SizeType kModeByteOffset =
       Endian::kNative == Endian::kLittle ? sizeof(HeapStorage) - 1 : 0;
 
   /**
    * Mask isolating the capacity bits of `heap.capacity` from the mode tag
-   * byte that shares storage with it. 
+   * byte that shares storage with it.
    */
   static constexpr SizeType kCapacityMask =
       Endian::kNative == Endian::kLittle
@@ -2021,20 +2021,20 @@ class BasicString : private detail::AllocatorHolder<A> {
     return storage_.heap.capacity & kCapacityMask;
   }
 
-  /** 
+  /**
    * @brief Sets the heap size and writes the null terminator at `n`.
-   * @note Precondition: currently in heap mode. 
+   * @note Precondition: currently in heap mode.
    */
   void SetHeapSize(const SizeType n) {
     storage_.heap.size = n;
     storage_.heap.data[n] = kNullTerminator;
   }
 
-  /** 
+  /**
    * @brief Initializes storage (SSO or heap, as appropriate) to hold `n`
    *        characters and returns a pointer to the writable buffer.
    * @note Caller is responsible for filling the returned buffer; the null
-   *       terminator at `[n]` is already set. 
+   *       terminator at `[n]` is already set.
    */
   Pointer InitWithSize(const SizeType n) {
     if (n <= kSSOCapacity) {
@@ -2045,13 +2045,13 @@ class BasicString : private detail::AllocatorHolder<A> {
     return storage_.heap.data;
   }
 
-  /** 
+  /**
    * @brief Allocates a new heap buffer of `new_capacity`, copies
    *        `old_size` characters from the current buffer, releases the old
    *        storage, and switches to heap mode.
    * @tparam SET_HEAP_SIZE_NOW If true (default), also sets the heap size to
    *         `old_size` (and writes the terminator); if false, the caller is
-   *         responsible for setting the size afterward. 
+   *         responsible for setting the size afterward.
    */
   template <Bool SET_HEAP_SIZE_NOW = true>
   void Reallocate(const SizeType new_capacity, const SizeType old_size) {
@@ -2066,11 +2066,11 @@ class BasicString : private detail::AllocatorHolder<A> {
     }
   }
 
-  /** 
+  /**
    * @brief Computes the next heap capacity needed to accommodate
    *        `add_size` more characters, growing geometrically
    *        (`kGrowthFactor`) but never below what is strictly required.
-   * @throws std::length_error if the requested size would exceed MaxSize(). 
+   * @throws std::length_error if the requested size would exceed MaxSize().
    */
   SizeType ComputeCapacity(SizeType old_capacity, SizeType add_size) {
     const auto remaining = MaxSize() - old_capacity;
