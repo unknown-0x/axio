@@ -356,7 +356,7 @@ class Vector : private detail::AllocatorHolder<A> {
   /** Returns a reference to the element at pos, throwing
    *  std::out_of_range if pos is out of bounds. */
   Reference At(SizeType pos) {
-    if (AXIO_LIKELY(pos >= Size())) {
+    if (AXIO_UNLIKELY(pos >= Size())) {
       throw std::out_of_range("Vector::At(SizeType): index " +
                               std::to_string(pos) + " out of range");
     }
@@ -365,7 +365,7 @@ class Vector : private detail::AllocatorHolder<A> {
 
   /** Const overload of At(). */
   ConstReference At(SizeType pos) const {
-    if (AXIO_LIKELY(pos >= Size())) {
+    if (AXIO_UNLIKELY(pos >= Size())) {
       throw std::out_of_range("Vector::At(SizeType) const: index " +
                               std::to_string(pos) + " out of range");
     }
@@ -434,8 +434,10 @@ class Vector : private detail::AllocatorHolder<A> {
     return ConstReverseIterator(begin_);
   }
 
-  /** Constructs a new element in-place at the end, growing storage if
-   *  needed. Returns a reference to the new element. */
+  /**
+   * Constructs a new element in-place at the end, growing storage if
+   * needed. Returns a reference to the new element.
+   */
   template <typename... ArgTypes>
   Reference Push(ArgTypes&&... args) {
     if (end_ == storage_end_) {
@@ -471,18 +473,18 @@ class Vector : private detail::AllocatorHolder<A> {
     const auto count = static_cast<SizeType>(std::distance(first, last));
     if (end_ + count > storage_end_) {
       auto& allocator = this->GetAlloc();
-      auto size = Size();
-      auto capacity =
+      const auto size = Size();
+      const auto capacity =
           ComputeCapacity(static_cast<SizeType>(storage_end_ - begin_), count);
       auto new_begin = AllocatorTraits::allocate(allocator, capacity);
       CopyElements(allocator, new_begin + size, first, last);
       MoveElements(allocator, new_begin, begin_, end_);
       Release(allocator);
-      SetStorage(new_begin, size, capacity);
+      SetStorage(new_begin, size + count, capacity);
     } else {
       CopyElements(this->GetAlloc(), end_, first, last);
+      end_ += count;
     }
-    end_ += count;
   }
 
   /** Appends elements from an initializer list to the end. */
@@ -746,11 +748,16 @@ class Vector : private detail::AllocatorHolder<A> {
     SetStorage(new_begin, size, capacity);
   }
 
-  /** Allocates storage for count elements and sets size == capacity == count.
+  /**
+   * Allocates storage for count elements and sets size == capacity == count.
    */
   AllocatorType& Initialize(SizeType count) {
     auto& allocator = this->GetAlloc();
-    SetStorage(AllocatorTraits::allocate(allocator, count), count, count);
+    if (count > 0) {
+      SetStorage(AllocatorTraits::allocate(allocator, count), count, count);
+    } else {
+      begin_ = end_ = storage_end_ = nullptr;
+    }
     return allocator;
   }
 
@@ -776,20 +783,24 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
-  /** Destroys elements in [first, last); no-op for trivially-destructible
-   *  types. */
+  /**
+   * Destroys elements in [first, last); no-op for trivially-destructible
+   * types.
+   */
   static void DestroyElements(AllocatorType& allocator,
                               Pointer first,
                               Pointer last) {
-    if constexpr (!IsTriviallyCopyConstructible_V<ValueType>) {
+    if constexpr (!IsTriviallyDestructible_V<ValueType>) {
       while (first != last) {
         AllocatorTraits::destroy(allocator, first++);
       }
     }
   }
 
-  /** Copy-constructs elements at dst from [first, last), using memcpy
-   *  when possible. Cleans up on exception. */
+  /**
+   * Copy-constructs elements at dst from [first, last), using memcpy
+   * when possible. Cleans up on exception.
+   */
   template <typename InputIt>
   static void CopyElements(AllocatorType& allocator,
                            Pointer dst,
@@ -816,8 +827,10 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
-  /** Copy-assigns elements in [first, last) from source, using memcpy
-   *  when possible. Optionally returns the advanced source iterator. */
+  /**
+   * Copy-assigns elements in [first, last) from source, using memcpy
+   *  when possible. Optionally returns the advanced source iterator.
+   */
   template <Bool RETURN_INPUT_IT, typename InputIt>
   static Conditional_T<RETURN_INPUT_IT, InputIt, void>
   CopyAssignElements(Pointer first, Pointer last, InputIt source) {
@@ -838,8 +851,10 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
-  /** Move-constructs elements at dst from [first, last), using memcpy
-   *  when possible. Cleans up on exception. */
+  /**
+   * Move-constructs elements at dst from [first, last), using memcpy
+   *  when possible. Cleans up on exception.
+   */
   template <typename InputIt>
   static void MoveElements(AllocatorType& allocator,
                            Pointer dst,
@@ -867,8 +882,10 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
-  /** Move-assigns elements at dst from [first, last), using memcpy when
-   *  possible. Does not handle overlapping forward ranges. */
+  /**
+   * Move-assigns elements at dst from [first, last), using memcpy when
+   *  possible. Does not handle overlapping forward ranges.
+   */
   template <typename InputIt>
   static void MoveAssignElements(Pointer dst, InputIt first, InputIt last) {
     using UseMemcpy = ShouldUseMemcpy<Pointer, InputIt>;
@@ -884,8 +901,10 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
-  /** Move-assigns elements from [first, last) ending at dst, iterating
-   *  backward; safe for overlapping ranges where dst > first. */
+  /**
+   * Move-assigns elements from [first, last) ending at dst, iterating
+   *  backward; safe for overlapping ranges where dst > first.
+   */
   template <typename InputIt>
   static void MoveAssignBackward(Pointer dst, InputIt first, InputIt last) {
     using UseMemcpy = ShouldUseMemcpy<Pointer, InputIt>;
@@ -901,8 +920,10 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
-  /** Default-constructs elements in [first, last); zero-fills for scalar
-   *  types. Cleans up on exception. */
+  /**
+   * Default-constructs elements in [first, last); zero-fills for scalar
+   *  types. Cleans up on exception.
+   */
   static void FillElements(AllocatorType& allocator,
                            Pointer first,
                            Pointer last) {
@@ -926,8 +947,10 @@ class Vector : private detail::AllocatorHolder<A> {
     }
   }
 
-  /** Constructs elements in [first, last) as copies of value; uses
-   *  memset where applicable for scalar types. Cleans up on exception. */
+  /**
+   *  Constructs elements in [first, last) as copies of value; uses
+   *  memset where applicable for scalar types. Cleans up on exception.
+   */
   static void FillElements(AllocatorType& allocator,
                            Pointer first,
                            Pointer last,
@@ -936,41 +959,48 @@ class Vector : private detail::AllocatorHolder<A> {
         RemoveCV_T<typename std::pointer_traits<Pointer>::element_type>;
 
     if constexpr (IsScalar_V<DestType>) {
-      if (AXIO_LIKELY(value == static_cast<DestType>(0) ||
-                      sizeof(DestType) == 1)) {
-        std::memset(first, value,
+      if constexpr (sizeof(DestType) == 1) {
+        std::memset(first, static_cast<unsigned char>(value),
+                    static_cast<SizeType>(last - first));
+        return;
+      }
+      if (value == static_cast<DestType>(0)) {
+        std::memset(first, 0,
                     static_cast<SizeType>(last - first) * sizeof(DestType));
-      } else {
-        while (first != last) {
-          AllocatorTraits::construct(allocator, first++, value);
-        }
+        return;
       }
-    } else {
-      Pointer current = first;
-      try {
-        while (current != last) {
-          AllocatorTraits::construct(allocator, current++, value);
-        }
-      } catch (...) {
-        while (first != current) {
-          AllocatorTraits::destroy(allocator, first++);
-        }
-        throw;
+    }
+
+    Pointer current = first;
+    try {
+      while (current != last) {
+        AllocatorTraits::construct(allocator, current++, value);
       }
+    } catch (...) {
+      while (first != current) {
+        AllocatorTraits::destroy(allocator, first++);
+      }
+      throw;
     }
   }
 
-  /** Assigns value to existing elements in [first, last); uses memset
-   *  where applicable for scalar types. */
+  /**
+   * Assigns value to existing elements in [first, last); uses memset
+   *  where applicable for scalar types.
+   */
   static void FillAssignElements(Pointer first,
                                  Pointer last,
                                  ConstReference value) {
     using DestType =
         RemoveCV_T<typename std::pointer_traits<Pointer>::element_type>;
     if constexpr (IsScalar_V<DestType>) {
-      if (AXIO_LIKELY(value == static_cast<DestType>(0) ||
-                      sizeof(DestType) == 1)) {
-        std::memset(first, value,
+      if constexpr (sizeof(DestType) == 1) {
+        std::memset(first, static_cast<unsigned char>(value),
+                    static_cast<SizeType>(last - first));
+        return;
+      }
+      if (value == static_cast<DestType>(0)) {
+        std::memset(first, 0,
                     static_cast<SizeType>(last - first) * sizeof(DestType));
         return;
       }

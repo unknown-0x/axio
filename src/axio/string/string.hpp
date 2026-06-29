@@ -496,10 +496,13 @@ class BasicString : private detail::AllocatorHolder<A> {
   BasicString& Assign(ForwardIt first, ForwardIt last) {
     const auto n = static_cast<SizeType>(std::distance(first, last));
     if (n > Capacity()) {
-      Release(this->GetAlloc());
-      InitWithSize(n);
+      auto& allocator = this->GetAlloc();
+      auto new_data = AllocatorTraits::allocate(allocator, n + 1);
+      Copy(new_data, first, n);
+      Release(allocator);
+      SetModeAsHeap(new_data, n, n);
+      return *this;
     }
-
     Copy(Data(), first, n);
     IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(n)) : SetHeapSize(n);
     return *this;
@@ -554,7 +557,7 @@ class BasicString : private detail::AllocatorHolder<A> {
    * @throws std::out_of_range if `pos >= Size()`.
    */
   Reference At(SizeType pos) {
-    if (AXIO_LIKELY(pos >= Size())) {
+    if (AXIO_UNLIKELY(pos >= Size())) {
       throw std::out_of_range("BasicString::At(SizeType) - index out of range");
     }
     return Data()[pos];
@@ -565,7 +568,7 @@ class BasicString : private detail::AllocatorHolder<A> {
    * @throws std::out_of_range if `pos >= Size()`.
    */
   ConstReference At(SizeType pos) const {
-    if (AXIO_LIKELY(pos >= Size())) {
+    if (AXIO_UNLIKELY(pos >= Size())) {
       throw std::out_of_range(
           "BasicString::At(SizeType) const - index out of range");
     }
@@ -682,9 +685,11 @@ class BasicString : private detail::AllocatorHolder<A> {
   /** @brief Reduces capacity to fit the current size, switching back to SSO
    *        storage when the size allows it. */
   void Shrink() {
+    if (IsSSO()) {
+      return;
+    }
     const auto size = Size();
-    const auto is_sso = IsSSO();
-    if ((is_sso && size <= kSSOCapacity) || (!is_sso && size == Capacity())) {
+    if (size == GetHeapCapacity()) {
       return;
     }
 
@@ -705,19 +710,19 @@ class BasicString : private detail::AllocatorHolder<A> {
    * @return A reference to the newly appended character.
    */
   Reference Push(ValueType c) {
-    auto size = Size();
+    const auto size = Size();
     const auto capacity = Capacity();
     if (size == capacity) {
       Reallocate<false>(ComputeCapacity(capacity, 1), size);
+      storage_.heap.data[size] = c;
+      SetHeapSize(size + 1);
+      return storage_.heap.data[size];
     }
-
-    auto data = Data();
-    data[size++] = c;
-
-    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(size))
-            : SetHeapSize(size);
-
-    return data[size - 1];
+    auto* data = Data();
+    data[size] = c;
+    IsSSO() ? SetModeAsSSO(static_cast<unsigned char>(size + 1))
+            : SetHeapSize(size + 1);
+    return data[size];
   }
 
   /**
@@ -1686,7 +1691,8 @@ class BasicString : private detail::AllocatorHolder<A> {
   template <typename StringViewLike,
             EnableIfIsStringViewLike<StringViewLike, int> = 0>
   BasicString& Replace(SizeType pos, SizeType count, const StringViewLike& s) {
-    return Replace(pos, count, s.data(), s.data() + s.size());
+    const StringViewType sv(s);
+    return Replace(pos, count, sv.data(), sv.data() + sv.size());
   }
 
   /** @brief Replaces `[pos, pos + count)` with the substring
@@ -1843,7 +1849,7 @@ class BasicString : private detail::AllocatorHolder<A> {
                        ConstIterator last,
                        const StringViewLike& s) {
     const StringViewType sv(s);
-    return Replace(first, last, sv.data(), s.data() + s.size());
+    return Replace(first, last, sv.data(), sv.data() + sv.size());
   }
 
   /** @brief Replaces `[first, last)` with the substring
@@ -1923,7 +1929,11 @@ class BasicString : private detail::AllocatorHolder<A> {
   void RTrim() {
     const auto pos =
         FindLastNotOf(kWhiteSpaces, kNpos, AXIO_ARRAY_SIZE(kWhiteSpaces));
-    Remove(pos + 1);
+    if (pos == kNpos) {
+      Clear();
+    } else {
+      Remove(pos + 1);
+    }
   }
 
  private:
@@ -1992,28 +2002,28 @@ class BasicString : private detail::AllocatorHolder<A> {
         static_cast<unsigned char>(kSSOCapacity - len);
   }
 
-  /** @brief Switches to heap mode, storing `data`/`capacity`/`size` and
-   *        writing the null terminator. */
-  void SetModeAsHeap(Pointer data, SizeType capacity, SizeType size) {
+  void InitHeapCapacity(SizeType n) noexcept {
+    storage_.heap.capacity = (n & kCapacityMask);
     storage_.raw[kModeByteOffset] |= kHeapMask;
+  }
+
+  /**
+   * @brief Switches to heap mode, storing `data`/`capacity`/`size` and
+   *        writing the null terminator.
+   */
+  void SetModeAsHeap(Pointer data, SizeType capacity, SizeType size) {
     storage_.heap.data = data;
-    SetHeapCapacity(capacity);
+    InitHeapCapacity(capacity);
     SetHeapSize(size);
   }
 
-  /** @brief Switches to heap mode, storing `data`/`capacity` only (size must
-   *        be set separately via SetHeapSize()). */
+  /**
+   * @brief Switches to heap mode, storing `data`/`capacity` only (size must
+   *        be set separately via SetHeapSize()).
+   */
   void SetModeAsHeap(Pointer data, SizeType capacity) {
-    storage_.raw[kModeByteOffset] |= kHeapMask;
     storage_.heap.data = data;
-    SetHeapCapacity(capacity);
-  }
-
-  /** @brief Sets the heap capacity field, preserving the mode tag bits that
-   *        share the same storage word. */
-  void SetHeapCapacity(SizeType n) {
-    storage_.heap.capacity =
-        (n & kCapacityMask) | (storage_.heap.capacity & ~kCapacityMask);
+    InitHeapCapacity(capacity);
   }
 
   /** @brief Returns the heap capacity, masking out the mode tag bits. */
