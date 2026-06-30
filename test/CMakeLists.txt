@@ -64,5 +64,6 @@ axio_test(
 
 axio_test(
     functional_test
+    functional/overload.cpp
     functional/small_function.cpp
 )
